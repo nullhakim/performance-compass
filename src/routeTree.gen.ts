@@ -10,13 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TargetsRouteImport } from './routes/targets'
+import { Route as ProductsRouteImport } from './routes/products'
 import { Route as MasterDataRouteImport } from './routes/master-data'
 import { Route as EmployeesRouteImport } from './routes/employees'
+import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TargetsRoute = TargetsRouteImport.update({
   id: '/targets',
   path: '/targets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsRoute = ProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MasterDataRoute = MasterDataRouteImport.update({
@@ -29,6 +36,11 @@ const EmployeesRoute = EmployeesRouteImport.update({
   path: '/employees',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CategoriesRoute = CategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -37,35 +49,62 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/categories': typeof CategoriesRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
+  '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/categories': typeof CategoriesRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
+  '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/categories': typeof CategoriesRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
+  '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/employees' | '/master-data' | '/targets'
+  fullPaths:
+    | '/'
+    | '/categories'
+    | '/employees'
+    | '/master-data'
+    | '/products'
+    | '/targets'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/employees' | '/master-data' | '/targets'
-  id: '__root__' | '/' | '/employees' | '/master-data' | '/targets'
+  to:
+    | '/'
+    | '/categories'
+    | '/employees'
+    | '/master-data'
+    | '/products'
+    | '/targets'
+  id:
+    | '__root__'
+    | '/'
+    | '/categories'
+    | '/employees'
+    | '/master-data'
+    | '/products'
+    | '/targets'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CategoriesRoute: typeof CategoriesRoute
   EmployeesRoute: typeof EmployeesRoute
   MasterDataRoute: typeof MasterDataRoute
+  ProductsRoute: typeof ProductsRoute
   TargetsRoute: typeof TargetsRoute
 }
 
@@ -76,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/targets'
       fullPath: '/targets'
       preLoaderRoute: typeof TargetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products': {
+      id: '/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof ProductsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/master-data': {
@@ -92,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/categories': {
+      id: '/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof CategoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -104,8 +157,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CategoriesRoute: CategoriesRoute,
   EmployeesRoute: EmployeesRoute,
   MasterDataRoute: MasterDataRoute,
+  ProductsRoute: ProductsRoute,
   TargetsRoute: TargetsRoute,
 }
 export const routeTree = rootRouteImport
