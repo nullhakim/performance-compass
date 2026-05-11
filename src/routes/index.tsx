@@ -73,7 +73,7 @@ function DashboardPage() {
     setCalculating(true);
     setResult(null);
     try {
-      const data = await api.getPerformance(Number(employeeId), Number(month), Number(year));
+      const data = await api.getPerformance(employeeId, Number(month), Number(year));
       setResult(data);
       toast.success("Performance calculated");
     } catch (err) {
@@ -101,7 +101,7 @@ function DashboardPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {employees.map((e) => (
-                    <SelectItem key={e.id} value={String(e.id)}>
+                    <SelectItem key={String(e.id)} value={String(e.id)}>
                       {e.name}
                     </SelectItem>
                   ))}
@@ -208,7 +208,7 @@ function DashboardPage() {
                         ? (d.total_achievement / d.nominal_target) * 100
                         : 0;
                       return (
-                        <TableRow key={d.target_id ?? idx}>
+                        <TableRow key={String(d.target_id ?? idx)}>
                           <TableCell className="font-medium">{d.product_name}</TableCell>
                           <TableCell className="text-right tabular-nums">
                             {formatRupiah(d.nominal_target)}
