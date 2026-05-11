@@ -1,21 +1,46 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent } from "@/components/ui/card";
-import { Database } from "lucide-react";
+import { FolderTree, Package, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/master-data")({
   head: () => ({ meta: [{ title: "Master Data — Performance Tracker" }] }),
-  component: () => (
-    <DashboardLayout title="Master Data" subtitle="Products and categories.">
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-20 text-center">
-          <Database className="h-10 w-10 text-muted-foreground" />
-          <p className="mt-4 text-sm font-medium">Master Data module</p>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            Coming next: manage products and categories.
-          </p>
-        </CardContent>
-      </Card>
-    </DashboardLayout>
-  ),
+  component: MasterDataPage,
 });
+
+function MasterDataPage() {
+  return (
+    <DashboardLayout title="Master Data" subtitle="Manage categories and products.">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link to="/categories">
+          <Card className="transition-colors hover:border-primary/60">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <FolderTree className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">Categories</p>
+                <p className="text-sm text-muted-foreground">Product groupings.</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to="/products">
+          <Card className="transition-colors hover:border-primary/60">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <Package className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">Products</p>
+                <p className="text-sm text-muted-foreground">Sales product catalog.</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+    </DashboardLayout>
+  );
+}
