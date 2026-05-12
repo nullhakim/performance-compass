@@ -9,17 +9,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
     ...init,
   });
-  let json: ApiSuccess<T> | ApiError;
-  try {
-    json = await res.json();
-  } catch {
-    throw new Error(`Invalid JSON response (status ${res.status})`);
+  const text = await res.text();
+  let json: ApiSuccess<T> | ApiError | null = null;
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+    }
   }
-  if (!res.ok || (json as ApiError).error) {
-    const err = json as ApiError;
+  if (!res.ok || (json && (json as ApiError).error)) {
+    const err = (json as ApiError) || {};
     throw new Error(err.detail || err.error || `Request failed (${res.status})`);
   }
-  return (json as ApiSuccess<T>).data;
+  return (json ? (json as ApiSuccess<T>).data : (undefined as T));
 }
 
 export type ID = string | number;
