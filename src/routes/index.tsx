@@ -36,7 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { api, formatRupiah, type Employee, type PerformanceResult } from "@/lib/api";
+import { api, formatRupiah, type Employee, type PerformanceResult, type Target, type TargetDetail } from "@/lib/api";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -91,8 +91,23 @@ function DashboardPage() {
     }
     setCalculating(true);
     try {
-      const data = await api.getPerformance(employeeId, Number(month), Number(year));
-      setResult(data);
+      const dataRaw = await api.getPerformance(employeeId, Number(month), Number(year));
+      // normalize various API shapes into PerformanceResult
+      const anyData: any = dataRaw;
+      if (anyData?.details && Array.isArray(anyData.details)) {
+        setResult(anyData as PerformanceResult);
+      } else if (Array.isArray(anyData)) {
+        setResult(mapTargetsArrayToResult(anyData as Target[]));
+      } else if (Array.isArray(anyData.targets)) {
+        setResult(mapTargetsArrayToResult(anyData.targets as Target[]));
+      } else if (anyData?.data) {
+        const inner = anyData.data;
+        if (inner?.details && Array.isArray(inner.details)) setResult(inner as PerformanceResult);
+        else if (Array.isArray(inner)) setResult(mapTargetsArrayToResult(inner as Target[]));
+        else setResult((anyData as PerformanceResult));
+      } else {
+        setResult((anyData as PerformanceResult));
+      }
       if (!silent) toast.success("Performance calculated");
     } catch (err) {
       if (!silent) toast.error("Failed to calculate performance", { description: (err as Error).message });
@@ -100,6 +115,35 @@ function DashboardPage() {
     } finally {
       setCalculating(false);
     }
+  };
+
+  const mapTargetsArrayToResult = (targets: any[]): PerformanceResult => {
+    const grouped = new Map<string, TargetDetail & { target_id?: string | number }>();
+    targets.forEach((t) => {
+      const productObj = t.product || { id: t.product_id, name: t.product_name };
+      const key = String(productObj?.id ?? t.product_id ?? t.id ?? Math.random());
+      const nominal = Number(t.nominal ?? t.nominal_target ?? 0) || 0;
+      const ach = Number(t.total_achievement ?? t.achievement ?? 0) || 0;
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.nominal_target = (existing.nominal_target || 0) + nominal;
+        existing.total_achievement = (existing.total_achievement || 0) + ach;
+      } else {
+        grouped.set(key, {
+          product_name: productObj?.name || "",
+          nominal_target: nominal,
+          total_achievement: ach,
+          target_id: t.id,
+        });
+      }
+    });
+    const details = Array.from(grouped.values()).map((g) => ({ ...g }));
+    return {
+      total_target: details.reduce((s, d) => s + (d.nominal_target || 0), 0),
+      total_achievement: details.reduce((s, d) => s + (d.total_achievement || 0), 0),
+      percentage: details.length ? (details.reduce((s, d) => s + (d.total_achievement || 0), 0) / details.reduce((s, d) => s + (d.nominal_target || 0), 0)) * 100 : 0,
+      details,
+    };
   };
 
   // Auto-refresh chart data when filters change

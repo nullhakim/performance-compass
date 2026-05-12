@@ -64,6 +64,7 @@ import {
   type PerformanceResult,
   type Product,
   type TargetDetail,
+  type Target,
 } from "@/lib/api";
 
 export const Route = createFileRoute("/targets")({
@@ -116,13 +117,80 @@ function TargetsPage() {
     };
   }, []);
 
+  const mapTargetsArrayToResult = (targets: any[]): PerformanceResult => {
+    const grouped = new Map<string, TargetDetail & { target_id?: string | number }>();
+    targets.forEach((t) => {
+      const productObj = t.product || { id: t.product_id, name: t.product_name };
+      const key = String(productObj?.id ?? t.product_id ?? t.id ?? Math.random());
+      const nominal = Number(t.nominal ?? t.nominal_target ?? 0) || 0;
+      const ach = Number(t.total_achievement ?? t.achievement ?? 0) || 0;
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.nominal_target = (existing.nominal_target || 0) + nominal;
+        existing.total_achievement = (existing.total_achievement || 0) + ach;
+      } else {
+        grouped.set(key, {
+          product_name: productObj?.name || "",
+          nominal_target: nominal,
+          total_achievement: ach,
+          target_id: t.id,
+        });
+      }
+    });
+    const details = Array.from(grouped.values()).map((g) => ({ ...g }));
+    return {
+      total_target: details.reduce((s, d) => s + (d.nominal_target || 0), 0),
+      total_achievement: details.reduce((s, d) => s + (d.total_achievement || 0), 0),
+      percentage: 0,
+      details,
+    };
+  };
+
   const fetchPerformance = async () => {
     if (!employeeId) return;
     setLoading(true);
     try {
-      const data = await api.getPerformance(employeeId, Number(month), Number(year));
-      setResult(data);
+      const dataRaw = await api.getPerformance(employeeId, Number(month), Number(year));
+      console.debug("api.getPerformance raw ->", dataRaw);
+
+      // If response already matches PerformanceResult
+      if ((dataRaw as PerformanceResult).details && Array.isArray((dataRaw as PerformanceResult).details)) {
+        setResult(dataRaw as PerformanceResult);
+        return;
+      }
+
+      // Handle shape: { targets: [...] }
+      const anyData = dataRaw as any;
+      if (Array.isArray(anyData)) {
+        const mapped = mapTargetsArrayToResult(anyData as Target[]);
+        console.debug("mapped from array ->", mapped);
+        setResult(mapped);
+        return;
+      }
+      if (Array.isArray(anyData.targets)) {
+        const mapped = mapTargetsArrayToResult(anyData.targets as Target[]);
+        console.debug("mapped from targets ->", mapped);
+        setResult(mapped);
+        return;
+      }
+
+      // Some APIs wrap under `data` key
+      if (anyData.data) {
+        const inner = anyData.data;
+        if (inner.details && Array.isArray(inner.details)) {
+          setResult(inner as PerformanceResult);
+          return;
+        }
+        if (Array.isArray(inner)) {
+          setResult(mapTargetsArrayToResult(inner as Target[]));
+          return;
+        }
+      }
+
+      // Fallback: set as-is if it roughly matches
+      setResult((dataRaw as unknown) as PerformanceResult);
     } catch (err) {
+      console.error(err);
       toast.error("Failed to load targets", { description: (err as Error).message });
       setResult(null);
     } finally {
@@ -519,11 +587,12 @@ function RecordAchievementDialog({
     }
     setSaving(true);
     try {
+      const closingIso = new Date(date).toISOString().replace(/\.\d{3}Z$/, "Z");
       await api.createAchievement({
         target_id: target.target_id,
         nominal: Number(nominal),
         description,
-        closing_date: format(date, "yyyy-MM-dd"),
+        closing_date: closingIso,
       });
       toast.success("Achievement recorded");
       onSaved();
