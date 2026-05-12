@@ -64,7 +64,6 @@ import {
   type PerformanceResult,
   type Product,
   type TargetDetail,
-  type ID,
 } from "@/lib/api";
 
 export const Route = createFileRoute("/targets")({
