@@ -75,6 +75,15 @@ export interface Target {
   year: number;
 }
 
+export interface Achievement {
+  id: ID;
+  target_id: ID;
+  nominal: number;
+  description: string;
+  closing_date: string;
+  created_at?: string;
+}
+
 export type EmployeeInput = Omit<Employee, "id">;
 export type CategoryInput = { name: string };
 export type ProductInput = { name: string; category_id: ID };
