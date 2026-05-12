@@ -130,7 +130,16 @@ function DashboardPage() {
     ];
   }, [rawPct]);
 
-  const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--muted))"];
+  const COLOR_TARGET = "#6366f1"; // indigo-500
+  const COLOR_ACHIEVEMENT = "#10b981"; // emerald-500
+  const COLOR_REMAINING = "#cbd5e1"; // slate-300
+  const PIE_COLORS = [COLOR_ACHIEVEMENT, COLOR_REMAINING];
+  const compactRp = (n: number) => {
+    if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `Rp ${(n / 1_000).toFixed(0)}k`;
+    return `Rp ${n}`;
+  };
 
   return (
     <DashboardLayout title="Performance Dashboard" subtitle="Calculate sales achievements by employee and period.">
