@@ -182,7 +182,7 @@ function DashboardPage() {
               />
             </div>
             <div className="flex items-end">
-              <Button onClick={handleCalculate} disabled={calculating} className="w-full">
+              <Button onClick={() => handleCalculate(false)} disabled={calculating} className="w-full">
                 {calculating ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
