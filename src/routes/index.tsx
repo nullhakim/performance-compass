@@ -217,8 +217,8 @@ function DashboardPage() {
                     <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Achievement %
                     </p>
-                    <p className="mt-1 text-3xl font-bold tabular-nums">
-                      {percentage.toFixed(1)}%
+                    <p className={`mt-1 text-3xl font-bold tabular-nums ${pctTone}`}>
+                      {rawPct.toFixed(1)}%
                     </p>
                   </div>
                   <CircularProgress value={percentage} />
