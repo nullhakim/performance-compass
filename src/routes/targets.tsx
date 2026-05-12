@@ -622,5 +622,3 @@ function HistoryDialog({
     </Dialog>
   );
 }
-
-// Avoid TS unused warning for ID import
