@@ -107,6 +107,12 @@ export const api = {
   getTargets: () => request<Target[]>("/targets"),
   createTarget: (body: { employee_id: ID; product_id: ID; nominal: number; month: number; year: number }) =>
     request<Target>("/targets", { method: "POST", body: JSON.stringify(body) }),
+  updateTargetNominal: (id: ID, nominal: number) =>
+    request<Target>(`/targets/${id}/nominal`, { method: "PATCH", body: JSON.stringify({ nominal }) }),
+  deleteTarget: (id: ID) =>
+    request<void>(`/targets/${id}`, { method: "DELETE" }),
+  getTargetAchievements: (targetId: ID) =>
+    request<Achievement[]>(`/targets/${targetId}/achievements`),
   createAchievement: (body: { target_id: ID; nominal: number; description: string; closing_date: string }) =>
     request(`/achievements`, { method: "POST", body: JSON.stringify(body) }),
 };
