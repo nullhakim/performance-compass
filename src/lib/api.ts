@@ -9,17 +9,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
     ...init,
   });
-  let json: ApiSuccess<T> | ApiError;
-  try {
-    json = await res.json();
-  } catch {
-    throw new Error(`Invalid JSON response (status ${res.status})`);
+  const text = await res.text();
+  let json: ApiSuccess<T> | ApiError | null = null;
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+    }
   }
-  if (!res.ok || (json as ApiError).error) {
-    const err = json as ApiError;
+  if (!res.ok || (json && (json as ApiError).error)) {
+    const err = (json as ApiError) || {};
     throw new Error(err.detail || err.error || `Request failed (${res.status})`);
   }
-  return (json as ApiSuccess<T>).data;
+  return (json ? (json as ApiSuccess<T>).data : (undefined as T));
 }
 
 export type ID = string | number;
@@ -72,6 +75,15 @@ export interface Target {
   year: number;
 }
 
+export interface Achievement {
+  id: ID;
+  target_id: ID;
+  nominal: number;
+  description: string;
+  closing_date: string;
+  created_at?: string;
+}
+
 export type EmployeeInput = Omit<Employee, "id">;
 export type CategoryInput = { name: string };
 export type ProductInput = { name: string; category_id: ID };
@@ -104,6 +116,12 @@ export const api = {
   getTargets: () => request<Target[]>("/targets"),
   createTarget: (body: { employee_id: ID; product_id: ID; nominal: number; month: number; year: number }) =>
     request<Target>("/targets", { method: "POST", body: JSON.stringify(body) }),
+  updateTargetNominal: (id: ID, nominal: number) =>
+    request<Target>(`/targets/${id}/nominal`, { method: "PATCH", body: JSON.stringify({ nominal }) }),
+  deleteTarget: (id: ID) =>
+    request<void>(`/targets/${id}`, { method: "DELETE" }),
+  getTargetAchievements: (targetId: ID) =>
+    request<Achievement[]>(`/targets/${targetId}/achievements`),
   createAchievement: (body: { target_id: ID; nominal: number; description: string; closing_date: string }) =>
     request(`/achievements`, { method: "POST", body: JSON.stringify(body) }),
 };

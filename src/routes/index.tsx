@@ -1,7 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Target as TargetIcon, TrendingUp, Percent, Calculator } from "lucide-react";
+import { Loader2, Target as TargetIcon, TrendingUp, Calculator } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,23 +80,66 @@ function DashboardPage() {
     };
   }, []);
 
-  const handleCalculate = async () => {
-    if (!employeeId) return toast.error("Please select an employee");
-    if (!month || !year) return toast.error("Please select month and year");
+  const handleCalculate = async (silent = false) => {
+    if (!employeeId) {
+      if (!silent) toast.error("Please select an employee");
+      return;
+    }
+    if (!month || !year) {
+      if (!silent) toast.error("Please select month and year");
+      return;
+    }
     setCalculating(true);
-    setResult(null);
     try {
       const data = await api.getPerformance(employeeId, Number(month), Number(year));
       setResult(data);
-      toast.success("Performance calculated");
+      if (!silent) toast.success("Performance calculated");
     } catch (err) {
-      toast.error("Failed to calculate performance", { description: (err as Error).message });
+      if (!silent) toast.error("Failed to calculate performance", { description: (err as Error).message });
+      setResult(null);
     } finally {
       setCalculating(false);
     }
   };
 
-  const percentage = result ? Math.min(100, Math.max(0, result.percentage ?? 0)) : 0;
+  // Auto-refresh chart data when filters change
+  useEffect(() => {
+    if (employeeId) handleCalculate(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId, month, year]);
+
+  const rawPct = result?.percentage ?? 0;
+  const percentage = Math.max(0, Math.min(100, rawPct));
+  const pctTone = rawPct > 100 ? "text-success" : rawPct < 50 ? "text-destructive" : "text-warning";
+
+  const barData = useMemo(
+    () =>
+      (result?.details || []).map((d) => ({
+        name: d.product_name,
+        Target: d.nominal_target,
+        Achievement: d.total_achievement,
+      })),
+    [result],
+  );
+
+  const pieData = useMemo(() => {
+    const achieved = Math.min(100, rawPct);
+    return [
+      { name: "Achieved", value: achieved },
+      { name: "Remaining", value: Math.max(0, 100 - achieved) },
+    ];
+  }, [rawPct]);
+
+  const COLOR_TARGET = "#6366f1"; // indigo-500
+  const COLOR_ACHIEVEMENT = "#10b981"; // emerald-500
+  const COLOR_REMAINING = "#cbd5e1"; // slate-300
+  const PIE_COLORS = [COLOR_ACHIEVEMENT, COLOR_REMAINING];
+  const compactRp = (n: number) => {
+    if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `Rp ${(n / 1_000).toFixed(0)}k`;
+    return `Rp ${n}`;
+  };
 
   return (
     <DashboardLayout title="Performance Dashboard" subtitle="Calculate sales achievements by employee and period.">
@@ -135,7 +191,7 @@ function DashboardPage() {
               />
             </div>
             <div className="flex items-end">
-              <Button onClick={handleCalculate} disabled={calculating} className="w-full">
+              <Button onClick={() => handleCalculate(false)} disabled={calculating} className="w-full">
                 {calculating ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
@@ -170,13 +226,74 @@ function DashboardPage() {
                     <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Achievement %
                     </p>
-                    <p className="mt-1 text-3xl font-bold tabular-nums">
-                      {percentage.toFixed(1)}%
+                    <p className={`mt-1 text-3xl font-bold tabular-nums ${pctTone}`}>
+                      {rawPct.toFixed(1)}%
                     </p>
                   </div>
                   <CircularProgress value={percentage} />
                 </div>
                 <Progress value={percentage} className="mt-4 h-2" />
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mb-6 grid gap-4 lg:grid-cols-3">
+            <Card className="border-border/60 shadow-sm lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold">Target vs Achievement</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {barData.length === 0 ? (
+                  <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
+                    No data for this period.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <BarChart data={barData} margin={{ top: 10, right: 16, bottom: 8, left: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} angle={barData.length > 4 ? -15 : 0} textAnchor={barData.length > 4 ? "end" : "middle"} height={50} />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={compactRp} width={70} />
+                      <Tooltip
+                        formatter={(v: number) => formatRupiah(v)}
+                        contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12 }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Bar dataKey="Target" fill={COLOR_TARGET} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Achievement" fill={COLOR_ACHIEVEMENT} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold">Overall Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={2}
+                      stroke="none"
+                    >
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <p className={`mt-2 text-center text-2xl font-bold tabular-nums ${pctTone}`}>
+                  {rawPct.toFixed(1)}%
+                </p>
+                <p className="text-center text-xs text-muted-foreground">Overall achievement</p>
               </CardContent>
             </Card>
           </div>
