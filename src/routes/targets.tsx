@@ -76,6 +76,9 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 11 }, (_, i) => CURRENT_YEAR - 5 + i);
+
 function pctTone(pct: number) {
   if (pct > 100) return "text-success";
   if (pct < 50) return "text-destructive";
