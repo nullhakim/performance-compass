@@ -80,23 +80,57 @@ function DashboardPage() {
     };
   }, []);
 
-  const handleCalculate = async () => {
-    if (!employeeId) return toast.error("Please select an employee");
-    if (!month || !year) return toast.error("Please select month and year");
+  const handleCalculate = async (silent = false) => {
+    if (!employeeId) {
+      if (!silent) toast.error("Please select an employee");
+      return;
+    }
+    if (!month || !year) {
+      if (!silent) toast.error("Please select month and year");
+      return;
+    }
     setCalculating(true);
-    setResult(null);
     try {
       const data = await api.getPerformance(employeeId, Number(month), Number(year));
       setResult(data);
-      toast.success("Performance calculated");
+      if (!silent) toast.success("Performance calculated");
     } catch (err) {
-      toast.error("Failed to calculate performance", { description: (err as Error).message });
+      if (!silent) toast.error("Failed to calculate performance", { description: (err as Error).message });
+      setResult(null);
     } finally {
       setCalculating(false);
     }
   };
 
-  const percentage = result ? Math.min(100, Math.max(0, result.percentage ?? 0)) : 0;
+  // Auto-refresh chart data when filters change
+  useEffect(() => {
+    if (employeeId) handleCalculate(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId, month, year]);
+
+  const rawPct = result?.percentage ?? 0;
+  const percentage = Math.max(0, Math.min(100, rawPct));
+  const pctTone = rawPct > 100 ? "text-success" : rawPct < 50 ? "text-destructive" : "text-warning";
+
+  const barData = useMemo(
+    () =>
+      (result?.details || []).map((d) => ({
+        name: d.product_name,
+        Target: d.nominal_target,
+        Achievement: d.total_achievement,
+      })),
+    [result],
+  );
+
+  const pieData = useMemo(() => {
+    const achieved = Math.min(100, rawPct);
+    return [
+      { name: "Achieved", value: achieved },
+      { name: "Remaining", value: Math.max(0, 100 - achieved) },
+    ];
+  }, [rawPct]);
+
+  const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--muted))"];
 
   return (
     <DashboardLayout title="Performance Dashboard" subtitle="Calculate sales achievements by employee and period.">
