@@ -624,4 +624,3 @@ function HistoryDialog({
 }
 
 // Avoid TS unused warning for ID import
-export type _id = ID;
