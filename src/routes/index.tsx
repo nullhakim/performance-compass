@@ -237,6 +237,67 @@ function DashboardPage() {
             </Card>
           </div>
 
+          <div className="mb-6 grid gap-4 lg:grid-cols-3">
+            <Card className="border-border/60 shadow-sm lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold">Target vs Achievement</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {barData.length === 0 ? (
+                  <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
+                    No data for this period.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <BarChart data={barData} margin={{ top: 10, right: 16, bottom: 8, left: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} angle={barData.length > 4 ? -15 : 0} textAnchor={barData.length > 4 ? "end" : "middle"} height={50} />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={compactRp} width={70} />
+                      <Tooltip
+                        formatter={(v: number) => formatRupiah(v)}
+                        contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12 }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Bar dataKey="Target" fill={COLOR_TARGET} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Achievement" fill={COLOR_ACHIEVEMENT} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold">Overall Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={2}
+                      stroke="none"
+                    >
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <p className={`mt-2 text-center text-2xl font-bold tabular-nums ${pctTone}`}>
+                  {rawPct.toFixed(1)}%
+                </p>
+                <p className="text-center text-xs text-muted-foreground">Overall achievement</p>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card className="border-border/60 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base font-semibold">Target Details</CardTitle>
