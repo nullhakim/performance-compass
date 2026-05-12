@@ -416,7 +416,14 @@ function CreateTargetDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Year *</Label>
-              <Input type="number" min={2000} max={2100} value={year} onChange={(e) => setYear(e.target.value)} />
+              <Select value={year} onValueChange={setYear}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {YEARS.map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
