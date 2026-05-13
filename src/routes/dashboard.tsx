@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/table";
 import { api, formatRupiah, type Employee, type PerformanceResult, type Target, type TargetDetail } from "@/lib/api";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Performance Dashboard — Employee Performance Tracker" },
