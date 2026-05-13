@@ -23,7 +23,7 @@ type NavGroup = {
 };
 
 const items: (NavItem | NavGroup)[] = [
-  { title: "Dashboard", to: "/", icon: LayoutDashboard },
+  { title: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { title: "Employees", to: "/employees", icon: Users },
   {
     title: "Master Data",
