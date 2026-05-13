@@ -13,6 +13,7 @@ import { Route as TargetsRouteImport } from './routes/targets'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as MasterDataRouteImport } from './routes/master-data'
 import { Route as EmployeesRouteImport } from './routes/employees'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -36,6 +37,11 @@ const EmployeesRoute = EmployeesRouteImport.update({
   path: '/employees',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategoriesRoute = CategoriesRouteImport.update({
   id: '/categories',
   path: '/categories',
@@ -50,6 +56,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
+  '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
   '/products': typeof ProductsRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
+  '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
   '/products': typeof ProductsRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
+  '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
   '/products': typeof ProductsRoute
@@ -77,6 +86,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/categories'
+    | '/dashboard'
     | '/employees'
     | '/master-data'
     | '/products'
@@ -85,6 +95,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/categories'
+    | '/dashboard'
     | '/employees'
     | '/master-data'
     | '/products'
@@ -93,6 +104,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/categories'
+    | '/dashboard'
     | '/employees'
     | '/master-data'
     | '/products'
@@ -102,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CategoriesRoute: typeof CategoriesRoute
+  DashboardRoute: typeof DashboardRoute
   EmployeesRoute: typeof EmployeesRoute
   MasterDataRoute: typeof MasterDataRoute
   ProductsRoute: typeof ProductsRoute
@@ -138,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/categories': {
       id: '/categories'
       path: '/categories'
@@ -158,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CategoriesRoute: CategoriesRoute,
+  DashboardRoute: DashboardRoute,
   EmployeesRoute: EmployeesRoute,
   MasterDataRoute: MasterDataRoute,
   ProductsRoute: ProductsRoute,
