@@ -132,21 +132,29 @@ export const api = {
     request<Meeting>("/meetings", { method: "POST", body: JSON.stringify(body) }),
   updateMeeting: (id: ID, body: MeetingUpdateInput) =>
     request<Meeting>(`/meetings/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  patchResultStatus: (resultId: ID, achievement_status: string) =>
+    request<void>(`/meetings/results/${resultId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ achievement_status }),
+    }),
 };
 
 export interface MeetingResult {
   id?: ID;
   employee_id: ID;
   employee_name?: string;
+  employee?: { id: ID; name: string; position?: string };
   target_description: string;
   target_nominal: number;
   target_completion_date: string;
+  achievement_status?: string;
   status?: string;
 }
 
 export interface MeetingParticipant {
   id?: ID;
   employee_id?: ID;
+  employee?: { id: ID; name: string; position?: string };
   name?: string;
 }
 
