@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TargetsRouteImport } from './routes/targets'
 import { Route as ProductsRouteImport } from './routes/products'
+import { Route as MeetingsRouteImport } from './routes/meetings'
 import { Route as MasterDataRouteImport } from './routes/master-data'
 import { Route as EmployeesRouteImport } from './routes/employees'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -25,6 +26,11 @@ const TargetsRoute = TargetsRouteImport.update({
 const ProductsRoute = ProductsRouteImport.update({
   id: '/products',
   path: '/products',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeetingsRoute = MeetingsRouteImport.update({
+  id: '/meetings',
+  path: '/meetings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MasterDataRoute = MasterDataRouteImport.update({
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
+  '/meetings': typeof MeetingsRoute
   '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
+  '/meetings': typeof MeetingsRoute
   '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
+  '/meetings': typeof MeetingsRoute
   '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/employees'
     | '/master-data'
+    | '/meetings'
     | '/products'
     | '/targets'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/employees'
     | '/master-data'
+    | '/meetings'
     | '/products'
     | '/targets'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/employees'
     | '/master-data'
+    | '/meetings'
     | '/products'
     | '/targets'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   EmployeesRoute: typeof EmployeesRoute
   MasterDataRoute: typeof MasterDataRoute
+  MeetingsRoute: typeof MeetingsRoute
   ProductsRoute: typeof ProductsRoute
   TargetsRoute: typeof TargetsRoute
 }
@@ -135,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/products'
       fullPath: '/products'
       preLoaderRoute: typeof ProductsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meetings': {
+      id: '/meetings'
+      path: '/meetings'
+      fullPath: '/meetings'
+      preLoaderRoute: typeof MeetingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/master-data': {
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   EmployeesRoute: EmployeesRoute,
   MasterDataRoute: MasterDataRoute,
+  MeetingsRoute: MeetingsRoute,
   ProductsRoute: ProductsRoute,
   TargetsRoute: TargetsRoute,
 }
