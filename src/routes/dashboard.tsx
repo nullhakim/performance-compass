@@ -52,132 +52,85 @@ const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-
 function DashboardPage() {
   const now = new Date();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [employeeId, setEmployeeId] = useState<string>("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [allTargets, setAllTargets] = useState<Target[]>([]);
   const [month, setMonth] = useState<string>(String(now.getMonth() + 1));
   const [year, setYear] = useState<string>(String(now.getFullYear()));
-  const [loadingEmployees, setLoadingEmployees] = useState(true);
-  const [calculating, setCalculating] = useState(false);
-  const [result, setResult] = useState<PerformanceResult | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [prods, targets] = await Promise.all([
+        api.getProducts(),
+        api.getTargets(),
+      ]);
+      setProducts(prods || []);
+      setAllTargets(targets || []);
+    } catch (err) {
+      toast.error("Failed to load dashboard data", { description: (err as Error).message });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    api
-      .getEmployees()
-      .then((data) => {
-        if (!mounted) return;
-        setEmployees(data || []);
-      })
-      .catch((err: Error) => {
-        toast.error("Failed to load employees", { description: err.message });
-      })
-      .finally(() => mounted && setLoadingEmployees(false));
-    return () => {
-      mounted = false;
-    };
+    loadData();
   }, []);
 
-  const handleCalculate = async (silent = false) => {
-    if (!employeeId) {
-      if (!silent) toast.error("Please select an employee");
-      return;
-    }
-    if (!month || !year) {
-      if (!silent) toast.error("Please select month and year");
-      return;
-    }
-    setCalculating(true);
-    try {
-      const dataRaw = await api.getPerformance(employeeId, Number(month), Number(year));
-      // normalize various API shapes into PerformanceResult
-      const anyData: any = dataRaw;
-      if (anyData?.details && Array.isArray(anyData.details)) {
-        setResult(anyData as PerformanceResult);
-      } else if (Array.isArray(anyData)) {
-        setResult(mapTargetsArrayToResult(anyData as Target[]));
-      } else if (Array.isArray(anyData.targets)) {
-        setResult(mapTargetsArrayToResult(anyData.targets as Target[]));
-      } else if (anyData?.data) {
-        const inner = anyData.data;
-        if (inner?.details && Array.isArray(inner.details)) setResult(inner as PerformanceResult);
-        else if (Array.isArray(inner)) setResult(mapTargetsArrayToResult(inner as Target[]));
-        else setResult((anyData as PerformanceResult));
-      } else {
-        setResult((anyData as PerformanceResult));
-      }
-      if (!silent) toast.success("Performance calculated");
-    } catch (err) {
-      if (!silent) toast.error("Failed to calculate performance", { description: (err as Error).message });
-      setResult(null);
-    } finally {
-      setCalculating(false);
-    }
-  };
+  const filteredTargets = useMemo(() => {
+    return allTargets.filter(
+      (t) => String(t.month) === month && String(t.year) === year
+    );
+  }, [allTargets, month, year]);
 
-  const mapTargetsArrayToResult = (targets: any[]): PerformanceResult => {
-    const grouped = new Map<string, TargetDetail & { target_id?: string | number }>();
-    targets.forEach((t) => {
-      const productObj = t.product || { id: t.product_id, name: t.product_name };
-      const key = String(productObj?.id ?? t.product_id ?? t.id ?? Math.random());
-      const nominal = Number(t.nominal ?? t.nominal_target ?? 0) || 0;
-      const ach = Number(t.total_achievement ?? t.achievement ?? 0) || 0;
-      const existing = grouped.get(key);
-      if (existing) {
-        existing.nominal_target = (existing.nominal_target || 0) + nominal;
-        existing.total_achievement = (existing.total_achievement || 0) + ach;
-      } else {
-        grouped.set(key, {
-          product_name: productObj?.name || "",
-          nominal_target: nominal,
-          total_achievement: ach,
-          target_id: t.id,
-        });
-      }
+  const stats = useMemo(() => {
+    let totalTarget = 0;
+    let totalAchievement = 0;
+    const productMap = new Map<string, { target: number; achievement: number }>();
+
+    // Initialize with all products
+    products.forEach((p) => {
+      productMap.set(p.name, { target: 0, achievement: 0 });
     });
-    const details = Array.from(grouped.values()).map((g) => ({ ...g }));
-    return {
-      total_target: details.reduce((s, d) => s + (d.nominal_target || 0), 0),
-      total_achievement: details.reduce((s, d) => s + (d.total_achievement || 0), 0),
-      percentage: details.length ? (details.reduce((s, d) => s + (d.total_achievement || 0), 0) / details.reduce((s, d) => s + (d.nominal_target || 0), 0)) * 100 : 0,
-      details,
-    };
-  };
 
-  // Auto-refresh chart data when filters change
-  useEffect(() => {
-    if (employeeId) handleCalculate(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeId, month, year]);
+    filteredTargets.forEach((t) => {
+      const pName = t.product_name || "Unknown";
+      const current = productMap.get(pName) || { target: 0, achievement: 0 };
+      
+      const nominal = Number(t.nominal || 0);
+      const achievement = Number((t as any).total_achievement || (t as any).achievement || 0);
 
-  const rawPct = result?.percentage ?? 0;
+      totalTarget += nominal;
+      totalAchievement += achievement;
+
+      productMap.set(pName, {
+        target: current.target + nominal,
+        achievement: current.achievement + achievement,
+      });
+    });
+
+    const productStats = Array.from(productMap.entries()).map(([name, data]) => ({
+      name,
+      Target: data.target,
+      Achievement: data.achievement,
+    })).filter(p => p.Target > 0 || p.Achievement > 0);
+
+    const percentage = totalTarget > 0 ? (totalAchievement / totalTarget) * 100 : 0;
+
+    return { totalTarget, totalAchievement, percentage, productStats };
+  }, [filteredTargets, products]);
+
+  const barData = stats.productStats;
+  const rawPct = stats.percentage;
   const percentage = Math.max(0, Math.min(100, rawPct));
-  const pctTone = rawPct > 100 ? "text-success" : rawPct < 50 ? "text-destructive" : "text-warning";
-
-  const barData = useMemo(
-    () =>
-      (result?.details || []).map((d) => ({
-        name: d.product_name,
-        Target: d.nominal_target,
-        Achievement: d.total_achievement,
-      })),
-    [result],
-  );
-
-  const pieData = useMemo(() => {
-    const achieved = Math.min(100, rawPct);
-    return [
-      { name: "Achieved", value: achieved },
-      { name: "Remaining", value: Math.max(0, 100 - achieved) },
-    ];
-  }, [rawPct]);
+  const pctTone = rawPct >= 100 ? "text-emerald-600" : rawPct < 50 ? "text-destructive" : "text-amber-500";
 
   const COLOR_TARGET = "#6366f1"; // indigo-500
   const COLOR_ACHIEVEMENT = "#10b981"; // emerald-500
-  const COLOR_REMAINING = "#cbd5e1"; // slate-300
-  const PIE_COLORS = [COLOR_ACHIEVEMENT, COLOR_REMAINING];
+  
   const compactRp = (n: number) => {
     if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)}B`;
     if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(1)}M`;
@@ -186,232 +139,139 @@ function DashboardPage() {
   };
 
   return (
-    <DashboardLayout title="Performance Dashboard" subtitle="Calculate sales achievements by employee and period.">
-      <Card className="mb-6 border-border/60 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="employee">Employee</Label>
-              <Select value={employeeId} onValueChange={setEmployeeId} disabled={loadingEmployees}>
-                <SelectTrigger id="employee">
-                  <SelectValue placeholder={loadingEmployees ? "Loading..." : "Select employee"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((e) => (
-                    <SelectItem key={String(e.id)} value={String(e.id)}>
-                      {e.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="month">Month</Label>
+    <DashboardLayout 
+      title="Company Performance Overview" 
+      subtitle="Summary of targets and achievements for all employees."
+    >
+      <div className="mb-8 grid gap-4 md:grid-cols-4">
+        <Card className="border-slate-200/60 bg-white/50 shadow-sm backdrop-blur-sm md:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500">Period Filter</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <div className="space-y-1">
+              <Label className="text-[10px] font-semibold text-slate-400">Month</Label>
               <Select value={month} onValueChange={setMonth}>
-                <SelectTrigger id="month">
-                  <SelectValue placeholder="Month" />
+                <SelectTrigger className="h-8 text-xs bg-white/80">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {MONTHS.map((m, i) => (
-                    <SelectItem key={i + 1} value={String(i + 1)}>
-                      {m}
-                    </SelectItem>
+                    <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="year">Year</Label>
-              <Input
-                id="year"
-                type="number"
-                min={2000}
-                max={2100}
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-              />
+            <div className="space-y-1">
+              <Label className="text-[10px] font-semibold text-slate-400">Year</Label>
+              <Select value={year} onValueChange={setYear}>
+                <SelectTrigger className="h-8 text-xs bg-white/80">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[2024, 2025, 2026].map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-end">
-              <Button onClick={() => handleCalculate(false)} disabled={calculating} className="w-full">
-                {calculating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Calculator className="mr-2 h-4 w-4" />
-                )}
-                Calculate Performance
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {result ? (
-        <>
-          <div className="mb-6 grid gap-4 md:grid-cols-3">
-            <MetricCard
-              label="Total Target"
-              value={formatRupiah(result.total_target)}
-              icon={<TargetIcon className="h-5 w-5" />}
-              tone="indigo"
-            />
-            <MetricCard
-              label="Total Achievement"
-              value={formatRupiah(result.total_achievement)}
-              icon={<TrendingUp className="h-5 w-5" />}
-              tone="emerald"
-            />
-            <Card className="relative overflow-hidden border-border/60 shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Achievement %
-                    </p>
-                    <p className={`mt-1 text-3xl font-bold tabular-nums ${pctTone}`}>
-                      {rawPct.toFixed(1)}%
-                    </p>
-                  </div>
-                  <CircularProgress value={percentage} />
-                </div>
-                <Progress value={percentage} className="mt-4 h-2" />
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="mb-6 grid gap-4 lg:grid-cols-3">
-            <Card className="border-border/60 shadow-sm lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-base font-semibold">Target vs Achievement</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {barData.length === 0 ? (
-                  <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
-                    No data for this period.
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={320}>
-                    <BarChart data={barData} margin={{ top: 10, right: 16, bottom: 8, left: 8 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} angle={barData.length > 4 ? -15 : 0} textAnchor={barData.length > 4 ? "end" : "middle"} height={50} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={compactRp} width={70} />
-                      <Tooltip
-                        formatter={(v: number) => formatRupiah(v)}
-                        contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12 }}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="Target" fill={COLOR_TARGET} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Achievement" fill={COLOR_ACHIEVEMENT} radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base font-semibold">Overall Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={55}
-                      outerRadius={85}
-                      paddingAngle={2}
-                      stroke="none"
-                    >
-                      {pieData.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12 }} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <p className={`mt-2 text-center text-2xl font-bold tabular-nums ${pctTone}`}>
-                  {rawPct.toFixed(1)}%
-                </p>
-                <p className="text-center text-xs text-muted-foreground">Overall achievement</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Target Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Nominal Target</TableHead>
-                    <TableHead className="text-right">Total Achievement</TableHead>
-                    <TableHead className="text-right">%</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(result.details || []).length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                        No target details for this period.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    result.details.map((d, idx) => {
-                      const pct = d.nominal_target > 0
-                        ? (d.total_achievement / d.nominal_target) * 100
-                        : 0;
-                      return (
-                        <TableRow key={String(d.target_id ?? idx)}>
-                          <TableCell className="font-medium">{d.product_name}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatRupiah(d.nominal_target)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatRupiah(d.total_achievement)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            <span
-                              className={
-                                pct >= 100
-                                  ? "text-success"
-                                  : pct >= 50
-                                    ? "text-warning"
-                                    : "text-destructive"
-                              }
-                            >
-                              {pct.toFixed(1)}%
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </>
-      ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-accent-foreground">
-              <Calculator className="h-6 w-6" />
-            </div>
-            <p className="mt-4 text-sm font-medium">No data yet</p>
-            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              Select an employee and period, then click "Calculate Performance" to see results.
-            </p>
           </CardContent>
         </Card>
-      )}
+
+        <MetricCard
+          label="Total Target (All)"
+          value={formatRupiah(stats.totalTarget)}
+          icon={<TargetIcon className="h-5 w-5" />}
+          tone="indigo"
+        />
+        <MetricCard
+          label="Total Achievement (All)"
+          value={formatRupiah(stats.totalAchievement)}
+          icon={<TrendingUp className="h-5 w-5" />}
+          tone="emerald"
+        />
+        <Card className="relative overflow-hidden border-slate-200/60 bg-white/50 shadow-sm backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Total Achievement %
+                </p>
+                <p className={`mt-1 text-3xl font-bold tabular-nums ${pctTone}`}>
+                  {rawPct.toFixed(1)}%
+                </p>
+              </div>
+              <CircularProgress value={percentage} />
+            </div>
+            <Progress value={percentage} className="mt-4 h-2 bg-slate-100" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="border-slate-200/60 bg-white/50 shadow-md backdrop-blur-sm lg:col-span-3">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100/50 pb-4">
+            <div>
+              <CardTitle className="text-lg font-bold text-slate-800">Achievement per Product</CardTitle>
+              <p className="text-xs text-slate-500">Global achievement breakdown across all products.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadData} disabled={loading} className="h-8 text-xs">
+              {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Refresh Data"}
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {loading ? (
+              <div className="flex h-[400px] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+              </div>
+            ) : barData.length === 0 ? (
+              <div className="flex h-[400px] flex-col items-center justify-center text-center">
+                <div className="mb-4 rounded-full bg-slate-50 p-4">
+                  <TargetIcon className="h-8 w-8 text-slate-300" />
+                </div>
+                <p className="text-sm font-medium text-slate-500">No performance data found for this period.</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 11, fill: "#64748b" }} 
+                    interval={0} 
+                    angle={-45} 
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 11, fill: "#64748b" }} 
+                    tickFormatter={compactRp}
+                    width={80}
+                  />
+                  <Tooltip
+                    formatter={(v: number) => formatRupiah(v)}
+                    contentStyle={{ 
+                      borderRadius: 12, 
+                      border: "none", 
+                      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                      fontSize: 12,
+                      padding: "12px"
+                    }}
+                    cursor={{ fill: "#f8fafc" }}
+                  />
+                  <Legend 
+                    verticalAlign="top" 
+                    align="right"
+                    wrapperStyle={{ paddingTop: 0, paddingBottom: 20, fontSize: 12 }}
+                  />
+                  <Bar dataKey="Target" fill={COLOR_TARGET} radius={[4, 4, 0, 0]} barSize={32} />
+                  <Bar dataKey="Achievement" fill={COLOR_ACHIEVEMENT} radius={[4, 4, 0, 0]} barSize={32} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </DashboardLayout>
   );
 }

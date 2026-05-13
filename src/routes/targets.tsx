@@ -11,7 +11,21 @@ import {
   Trash2,
   TrendingUp,
   History,
+  Calculator,
+  FileDown,
 } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -146,52 +160,41 @@ function TargetsPage() {
     };
   };
 
-  const fetchPerformance = async () => {
-    if (!employeeId) return;
+  const fetchPerformance = async (silent = false) => {
+    if (!employeeId) {
+      if (!silent) toast.error("Please select an employee");
+      return;
+    }
     setLoading(true);
     try {
       const dataRaw = await api.getPerformance(employeeId, Number(month), Number(year));
-      console.debug("api.getPerformance raw ->", dataRaw);
-
-      // If response already matches PerformanceResult
+      
+      let finalResult: PerformanceResult | null = null;
       if ((dataRaw as PerformanceResult).details && Array.isArray((dataRaw as PerformanceResult).details)) {
-        setResult(dataRaw as PerformanceResult);
-        return;
-      }
-
-      // Handle shape: { targets: [...] }
-      const anyData = dataRaw as any;
-      if (Array.isArray(anyData)) {
-        const mapped = mapTargetsArrayToResult(anyData as Target[]);
-        console.debug("mapped from array ->", mapped);
-        setResult(mapped);
-        return;
-      }
-      if (Array.isArray(anyData.targets)) {
-        const mapped = mapTargetsArrayToResult(anyData.targets as Target[]);
-        console.debug("mapped from targets ->", mapped);
-        setResult(mapped);
-        return;
-      }
-
-      // Some APIs wrap under `data` key
-      if (anyData.data) {
-        const inner = anyData.data;
-        if (inner.details && Array.isArray(inner.details)) {
-          setResult(inner as PerformanceResult);
-          return;
-        }
-        if (Array.isArray(inner)) {
-          setResult(mapTargetsArrayToResult(inner as Target[]));
-          return;
+        finalResult = dataRaw as PerformanceResult;
+      } else {
+        const anyData = dataRaw as any;
+        if (Array.isArray(anyData)) {
+          finalResult = mapTargetsArrayToResult(anyData);
+        } else if (Array.isArray(anyData.targets)) {
+          finalResult = mapTargetsArrayToResult(anyData.targets);
+        } else if (anyData.data) {
+          const inner = anyData.data;
+          if (inner.details && Array.isArray(inner.details)) finalResult = inner;
+          else if (Array.isArray(inner)) finalResult = mapTargetsArrayToResult(inner);
         }
       }
-
-      // Fallback: set as-is if it roughly matches
-      setResult((dataRaw as unknown) as PerformanceResult);
+      
+      if (finalResult) {
+        // Recalculate percentage if missing
+        if (!finalResult.percentage && finalResult.total_target > 0) {
+          finalResult.percentage = (finalResult.total_achievement / finalResult.total_target) * 100;
+        }
+        setResult(finalResult);
+        if (!silent) toast.success("Performance calculated");
+      }
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to load targets", { description: (err as Error).message });
+      if (!silent) toast.error("Failed to load targets", { description: (err as Error).message });
       setResult(null);
     } finally {
       setLoading(false);
@@ -199,7 +202,7 @@ function TargetsPage() {
   };
 
   useEffect(() => {
-    if (employeeId) fetchPerformance();
+    if (employeeId) fetchPerformance(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId, month, year]);
 
@@ -213,6 +216,71 @@ function TargetsPage() {
     } catch (err) {
       toast.error("Failed to delete", { description: (err as Error).message });
     }
+  };
+
+  const generatePDF = () => {
+    if (!result || !employeeId) return;
+    const employee = employees.find((e) => String(e.id) === employeeId);
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(79, 70, 229); // Indigo-600
+    doc.text("Performance Report", pageWidth / 2, 20, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // Slate-500
+    doc.text(`Generated on ${format(new Date(), "PPP p")}`, pageWidth / 2, 28, { align: "center" });
+
+    // Employee Info
+    doc.setDrawColor(226, 232, 240);
+    doc.line(20, 35, pageWidth - 20, 35);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(30, 41, 59); // Slate-800
+    doc.setFont("helvetica", "bold");
+    doc.text("Employee Information", 20, 45);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Name: ${employee?.name || "N/A"}`, 20, 52);
+    doc.text(`Position: ${employee?.position || "N/A"}`, 20, 58);
+    doc.text(`Period: ${MONTHS[Number(month) - 1]} ${year}`, 20, 64);
+
+    // Summary Metrics
+    doc.setFont("helvetica", "bold");
+    doc.text("Summary Metrics", 120, 45);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Target: ${formatRupiah(result.total_target)}`, 120, 52);
+    doc.text(`Total Achievement: ${formatRupiah(result.total_achievement)}`, 120, 58);
+    doc.text(`Overall Percentage: ${result.percentage.toFixed(1)}%`, 120, 64);
+
+    // Table
+    const tableData = result.details.map((d) => [
+      d.product_name,
+      formatRupiah(d.nominal_target),
+      formatRupiah(d.total_achievement),
+      `${((d.total_achievement / (d.nominal_target || 1)) * 100).toFixed(1)}%`,
+    ]);
+
+    autoTable(doc, {
+      startY: 75,
+      head: [["Product", "Target", "Achievement", "Percentage"]],
+      body: tableData,
+      headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 20, right: 20 },
+    });
+
+    // Footer
+    const finalY = (doc as any).lastAutoTable.finalY || 150;
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text("This is an automatically generated document from Super App Internal.", pageWidth / 2, finalY + 20, { align: "center" });
+
+    doc.save(`Performance_${employee?.name || "Employee"}_${month}_${year}.pdf`);
+    toast.success("PDF Report downloaded");
   };
 
   return (
@@ -259,9 +327,147 @@ function TargetsPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-end md:col-span-3">
+              <Button onClick={() => fetchPerformance(false)} disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700 shadow-sm">
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calculator className="mr-2 h-4 w-4" />}
+                Calculate Performance
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {result && (
+        <div className="mb-6 grid gap-4 md:grid-cols-3 animate-in fade-in slide-in-from-top-4 duration-500">
+          <Card className="border-border/60 shadow-sm bg-indigo-50/30">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">Total Target</p>
+                <p className="text-xl font-bold text-slate-900">{formatRupiah(result.total_target)}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                <TargetIcon className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 shadow-sm bg-emerald-50/30">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Total Achievement</p>
+                <p className="text-xl font-bold text-slate-900">{formatRupiah(result.total_achievement)}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 shadow-sm bg-white">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Overall Achievement</p>
+                <p className={cn("text-xl font-bold", pctTone(result.percentage))}>
+                  {result.percentage.toFixed(1)}%
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-16">
+                  <Progress value={Math.min(100, result.percentage)} className="h-1.5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {result && (
+        <div className="grid gap-6 mb-6 lg:grid-cols-3 animate-in fade-in slide-in-from-top-4 duration-700 delay-150">
+          <Card className="border-border/60 shadow-sm lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="text-base font-semibold">Target vs Achievement Trend</CardTitle>
+                <p className="text-xs text-muted-foreground">Product-wise comparison for the selected period.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={generatePDF} className="h-8 gap-2">
+                <FileDown className="h-3.5 w-3.5" /> Export PDF
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={result.details.map(d => ({
+                      name: d.product_name,
+                      Target: d.nominal_target,
+                      Achievement: d.total_achievement
+                    }))}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fontSize: 11, fill: "#64748b" }} 
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11, fill: "#64748b" }} 
+                      tickFormatter={(v) => `Rp${v/1000000}M`}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip 
+                      formatter={(v: number) => formatRupiah(v)}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="Target" 
+                      stroke="#6366f1" 
+                      strokeWidth={3} 
+                      dot={{ r: 4, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }} 
+                      activeDot={{ r: 6 }} 
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="Achievement" 
+                      stroke="#10b981" 
+                      strokeWidth={3} 
+                      dot={{ r: 4, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }} 
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-sm flex flex-col">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col justify-center py-6">
+              <div className="space-y-4">
+                {result.details.slice(0, 5).map((d, i) => {
+                  const pct = d.nominal_target > 0 ? (d.total_achievement / d.nominal_target) * 100 : 0;
+                  return (
+                    <div key={i} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-slate-700 truncate max-w-[120px]">{d.product_name}</span>
+                        <span className="text-slate-500">{pct.toFixed(0)}%</span>
+                      </div>
+                      <Progress value={Math.min(100, pct)} className="h-1" />
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-8 text-center text-[11px] text-muted-foreground italic">
+                Showing top 5 products by distribution.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card className="border-border/60 shadow-sm">
         <CardHeader>
