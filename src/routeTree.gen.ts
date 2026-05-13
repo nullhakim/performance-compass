@@ -17,6 +17,7 @@ import { Route as EmployeesRouteImport } from './routes/employees'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MeetingsIdRouteImport } from './routes/meetings.$id'
 
 const TargetsRoute = TargetsRouteImport.update({
   id: '/targets',
@@ -58,6 +59,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MeetingsIdRoute = MeetingsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => MeetingsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -65,9 +71,10 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
-  '/meetings': typeof MeetingsRoute
+  '/meetings': typeof MeetingsRouteWithChildren
   '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
+  '/meetings/$id': typeof MeetingsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -75,9 +82,10 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
-  '/meetings': typeof MeetingsRoute
+  '/meetings': typeof MeetingsRouteWithChildren
   '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
+  '/meetings/$id': typeof MeetingsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -86,9 +94,10 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
-  '/meetings': typeof MeetingsRoute
+  '/meetings': typeof MeetingsRouteWithChildren
   '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
+  '/meetings/$id': typeof MeetingsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/meetings'
     | '/products'
     | '/targets'
+    | '/meetings/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/meetings'
     | '/products'
     | '/targets'
+    | '/meetings/$id'
   id:
     | '__root__'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/meetings'
     | '/products'
     | '/targets'
+    | '/meetings/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -129,7 +141,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   EmployeesRoute: typeof EmployeesRoute
   MasterDataRoute: typeof MasterDataRoute
-  MeetingsRoute: typeof MeetingsRoute
+  MeetingsRoute: typeof MeetingsRouteWithChildren
   ProductsRoute: typeof ProductsRoute
   TargetsRoute: typeof TargetsRoute
 }
@@ -192,8 +204,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/meetings/$id': {
+      id: '/meetings/$id'
+      path: '/$id'
+      fullPath: '/meetings/$id'
+      preLoaderRoute: typeof MeetingsIdRouteImport
+      parentRoute: typeof MeetingsRoute
+    }
   }
 }
+
+interface MeetingsRouteChildren {
+  MeetingsIdRoute: typeof MeetingsIdRoute
+}
+
+const MeetingsRouteChildren: MeetingsRouteChildren = {
+  MeetingsIdRoute: MeetingsIdRoute,
+}
+
+const MeetingsRouteWithChildren = MeetingsRoute._addFileChildren(
+  MeetingsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -201,7 +232,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   EmployeesRoute: EmployeesRoute,
   MasterDataRoute: MasterDataRoute,
-  MeetingsRoute: MeetingsRoute,
+  MeetingsRoute: MeetingsRouteWithChildren,
   ProductsRoute: ProductsRoute,
   TargetsRoute: TargetsRoute,
 }

@@ -124,7 +124,69 @@ export const api = {
     request<Achievement[]>(`/targets/${targetId}/achievements`),
   createAchievement: (body: { target_id: ID; nominal: number; description: string; closing_date: string }) =>
     request(`/achievements`, { method: "POST", body: JSON.stringify(body) }),
+
+  // Meetings
+  getMeetings: () => request<Meeting[]>("/meetings"),
+  getMeeting: (id: ID) => request<Meeting>(`/meetings/${id}`),
+  createMeeting: (body: MeetingInput) =>
+    request<Meeting>("/meetings", { method: "POST", body: JSON.stringify(body) }),
+  updateMeeting: (id: ID, body: MeetingUpdateInput) =>
+    request<Meeting>(`/meetings/${id}`, { method: "PUT", body: JSON.stringify(body) }),
 };
+
+export interface MeetingResult {
+  id?: ID;
+  employee_id: ID;
+  employee_name?: string;
+  target_description: string;
+  target_nominal: number;
+  target_completion_date: string;
+  status?: string;
+}
+
+export interface MeetingParticipant {
+  id?: ID;
+  employee_id?: ID;
+  name?: string;
+}
+
+export interface Meeting {
+  id: ID;
+  division: string;
+  title: string;
+  meeting_date: string;
+  meeting_type: string;
+  summary?: string;
+  notes?: string;
+  speaker?: string;
+  participant_ids?: ID[];
+  participants?: MeetingParticipant[] | Employee[];
+  results?: MeetingResult[];
+  image_urls?: string[];
+}
+
+export interface MeetingInput {
+  division: string;
+  title: string;
+  meeting_date: string;
+  meeting_type: string;
+  summary: string;
+  notes: string;
+  speaker: string;
+  participant_ids: string[];
+  results: {
+    employee_id: string;
+    target_description: string;
+    target_nominal: number;
+    target_completion_date: string;
+  }[];
+  image_urls: string[];
+}
+
+export type MeetingUpdateInput = Pick<
+  MeetingInput,
+  "division" | "title" | "meeting_date" | "meeting_type" | "summary" | "notes" | "speaker"
+>;
 
 export function formatRupiah(value: number): string {
   if (value == null || isNaN(value)) return "Rp 0";
