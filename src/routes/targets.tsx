@@ -12,7 +12,21 @@ import {
   History,
   Trash2,
   TrendingUp,
+  Target as TargetIcon,
+  FileDown,
 } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -158,8 +172,102 @@ function TargetsPage() {
     }
   };
 
+  // --- Calculations for Widgets & Chart (Current Page Data) ---
+  const pageTotalTarget = rows.reduce((sum, r) => sum + (r.nominal || 0), 0);
+  const pageTotalAch = rows.reduce((sum, r) => sum + (r.total_achievement || 0), 0);
+  const pagePercentage = pageTotalTarget > 0 ? (pageTotalAch / pageTotalTarget) * 100 : 0;
+
+  const chartData = useMemo(() => {
+    const grouped = new Map<string, { name: string; Target: number; Achievement: number }>();
+    rows.forEach((r) => {
+      const pName = r.product?.name || "Unknown";
+      const existing = grouped.get(pName) || { name: pName, Target: 0, Achievement: 0 };
+      existing.Target += r.nominal || 0;
+      existing.Achievement += r.total_achievement || 0;
+      grouped.set(pName, existing);
+    });
+    return Array.from(grouped.values());
+  }, [rows]);
+
+  // --- PDF Generation ---
+  const generatePDF = () => {
+    if (rows.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(79, 70, 229);
+    doc.text("Targets & Achievements Report", pageWidth / 2, 20, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Generated on ${format(new Date(), "PPP p")}`, pageWidth / 2, 28, { align: "center" });
+
+    // Filter Info
+    doc.setDrawColor(226, 232, 240);
+    doc.line(20, 35, pageWidth - 20, 35);
+
+    doc.setFontSize(12);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text("Filter Criteria", 20, 45);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const periodText = month === "0" && year === "0" ? "All-Time" : `${month === "0" ? "All" : MONTHS[Number(month) - 1]} ${year === "0" ? "All" : year}`;
+    const prodText = productId === "all" ? "All Products" : products.find(p => String(p.id) === productId)?.name || "N/A";
+
+    doc.text(`Period: ${periodText}`, 20, 52);
+    doc.text(`Product: ${prodText}`, 20, 58);
+
+    // Summary Metrics
+    doc.setFont("helvetica", "bold");
+    doc.text("Current Page Summary", 120, 45);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Target: ${formatRupiah(pageTotalTarget)}`, 120, 52);
+    doc.text(`Total Achievement: ${formatRupiah(pageTotalAch)}`, 120, 58);
+    doc.text(`Overall Progress: ${pagePercentage.toFixed(1)}%`, 120, 64);
+
+    // Table
+    const tableData = rows.map((r) => {
+      const pct = r.nominal > 0 ? (r.total_achievement / r.nominal) * 100 : 0;
+      return [
+        r.employee?.name || "—",
+        r.product?.name || "—",
+        formatRupiah(r.nominal || 0),
+        formatRupiah(r.total_achievement || 0),
+        `${pct.toFixed(1)}%`,
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 75,
+      head: [["Employee", "Product", "Target", "Achievement", "Progress"]],
+      body: tableData,
+      headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 20, right: 20 },
+    });
+
+    // Footer
+    // @ts-ignore
+    const finalY = doc.lastAutoTable?.finalY || 150;
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text("This is an automatically generated document from Employee Performance Tracker.", pageWidth / 2, finalY + 20, { align: "center" });
+
+    doc.save(`Targets_Report_${format(new Date(), "yyyyMMdd_HHmm")}.pdf`);
+    toast.success("PDF Report downloaded");
+  };
+
   return (
-    <DashboardLayout title="Targets & Achievements" subtitle="Manage targets and record achievements.">
+    <DashboardLayout title="Targets & Achievements" subtitle="Manage targets and record achievements globally.">
+
+      {/* 1. FILTER SECTION */}
       <Card className="mb-6 border-border/60 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base font-semibold">Filters</CardTitle>
@@ -175,7 +283,9 @@ function TargetsPage() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">All-Time</SelectItem>
-                  {MONTHS.map((m, i) => <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>)}
+                  {MONTHS.map((m, i) => (
+                    <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -185,7 +295,9 @@ function TargetsPage() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">All-Time</SelectItem>
-                  {YEARS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                  {YEARS.map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -195,7 +307,9 @@ function TargetsPage() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Products</SelectItem>
-                  {products.map((p) => <SelectItem key={String(p.id)} value={String(p.id)}>{p.name}</SelectItem>)}
+                  {products.map((p) => (
+                    <SelectItem key={String(p.id)} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -203,10 +317,111 @@ function TargetsPage() {
         </CardContent>
       </Card>
 
+      {/* 2. SUMMARY WIDGETS (Visible if there is data) */}
+      {rows.length > 0 && !loading && (
+        <div className="mb-6 grid gap-4 md:grid-cols-3 animate-in fade-in slide-in-from-top-4 duration-500">
+          <Card className="border-border/60 shadow-sm bg-indigo-50/30">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">Page Total Target</p>
+                <p className="text-xl font-bold text-slate-900">{formatRupiah(pageTotalTarget)}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                <TargetIcon className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 shadow-sm bg-emerald-50/30">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Page Total Achieved</p>
+                <p className="text-xl font-bold text-slate-900">{formatRupiah(pageTotalAch)}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 shadow-sm bg-white">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Page Overall Progress</p>
+                <p className={cn("text-xl font-bold", pctTone(pagePercentage))}>
+                  {pagePercentage.toFixed(1)}%
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-16">
+                  <Progress value={Math.min(100, pagePercentage)} className="h-1.5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* 3. LINE CHART SECTION */}
+      {chartData.length > 0 && !loading && (
+        <Card className="mb-6 border-border/60 shadow-sm animate-in fade-in slide-in-from-top-4 duration-700">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Target vs Achievement Trend</CardTitle>
+            <p className="text-xs text-muted-foreground">Aggregated by product for the current view.</p>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full pt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    tickFormatter={(v) => `Rp${v / 1000000}M`}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(v: number) => formatRupiah(v)}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
+                  <Line
+                    type="monotone"
+                    dataKey="Target"
+                    stroke="#6366f1"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Achievement"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 4. TABLE SECTION (PAGINATED) */}
       <Card className="border-border/60 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base font-semibold">Targets</CardTitle>
-          <p className="text-xs text-muted-foreground">{total} record{total !== 1 ? "s" : ""}</p>
+          <div>
+            <CardTitle className="text-base font-semibold">Targets List</CardTitle>
+            <p className="text-xs text-muted-foreground">{total} record{total !== 1 ? "s" : ""} overall</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={generatePDF} className="h-8 gap-2">
+            <FileDown className="h-3.5 w-3.5" /> Export PDF
+          </Button>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -277,6 +492,7 @@ function TargetsPage() {
                 </TableBody>
               </Table>
 
+              {/* PAGINATION CONTROLS */}
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">Page {page} of {totalPages}</p>
                 <div className="flex gap-2">
@@ -293,6 +509,7 @@ function TargetsPage() {
         </CardContent>
       </Card>
 
+      {/* 5. DIALOGS */}
       <CreateTargetDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
@@ -302,11 +519,22 @@ function TargetsPage() {
         onCreated={() => { setCreateOpen(false); load(); }}
       />
 
-      <EditNominalDialog row={editRow} onOpenChange={(v) => !v && setEditRow(null)} onSaved={() => { setEditRow(null); load(); }} />
+      <EditNominalDialog
+        row={editRow}
+        onOpenChange={(v) => !v && setEditRow(null)}
+        onSaved={() => { setEditRow(null); load(); }}
+      />
 
-      <RecordAchievementDialog row={achRow} onOpenChange={(v) => !v && setAchRow(null)} onSaved={() => { setAchRow(null); load(); }} />
+      <RecordAchievementDialog
+        row={achRow}
+        onOpenChange={(v) => !v && setAchRow(null)}
+        onSaved={() => { setAchRow(null); load(); }}
+      />
 
-      <HistoryDialog row={historyRow} onOpenChange={(v) => !v && setHistoryRow(null)} />
+      <HistoryDialog
+        row={historyRow}
+        onOpenChange={(v) => !v && setHistoryRow(null)}
+      />
 
       <AlertDialog open={!!deleteRow} onOpenChange={(v) => !v && setDeleteRow(null)}>
         <AlertDialogContent>
@@ -560,7 +788,7 @@ function RecordAchievementDialog({
                   {date ? format(date, "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent align="start" className="w-auto p-0">
                 <Calendar mode="single" selected={date} onSelect={setDate} initialFocus className={cn("p-3 pointer-events-auto")} />
               </PopoverContent>
             </Popover>
