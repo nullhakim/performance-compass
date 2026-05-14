@@ -25,6 +25,87 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (json ? (json as ApiSuccess<T>).data : (undefined as T));
 }
 
+async function requestRaw<T = any>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    ...init,
+  });
+  const text = await res.text();
+  let json: any = null;
+  if (text) {
+    try { json = JSON.parse(text); } catch { if (!res.ok) throw new Error(`Request failed (${res.status})`); }
+  }
+  if (!res.ok || (json && json.error)) {
+    throw new Error(json?.detail || json?.error || `Request failed (${res.status})`);
+  }
+  return json as T;
+}
+
+export interface TargetsQueryParams {
+  page?: number;
+  limit?: number;
+  month?: number; // 0 = all
+  year?: number;  // 0 = all
+  product_id?: ID | "";
+  employee_id?: ID | "";
+}
+
+export interface TargetRow {
+  id: ID;
+  nominal: number;
+  total_achievement: number;
+  month: number;
+  year: number;
+  employee?: { id: ID; name: string };
+  product?: { id: ID; name: string };
+  employee_id?: ID;
+  product_id?: ID;
+}
+
+export interface TargetsPage {
+  items: TargetRow[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
+function buildTargetsQuery(p: TargetsQueryParams): string {
+  const q = new URLSearchParams();
+  if (p.page) q.set("page", String(p.page));
+  if (p.limit) q.set("limit", String(p.limit));
+  if (p.month && p.month > 0) q.set("month", String(p.month));
+  if (p.year && p.year > 0) q.set("year", String(p.year));
+  if (p.product_id) q.set("product_id", String(p.product_id));
+  if (p.employee_id) q.set("employee_id", String(p.employee_id));
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
+
+export async function fetchTargets(params: TargetsQueryParams = {}): Promise<TargetsPage> {
+  const raw = await requestRaw<any>(`/targets${buildTargetsQuery(params)}`);
+  const data = raw?.data ?? raw;
+  let items: TargetRow[] = [];
+  let page = params.page ?? 1;
+  let limit = params.limit ?? 10;
+  let total = 0;
+  let total_pages = 1;
+  if (Array.isArray(data)) {
+    items = data;
+    total = raw?.meta?.total ?? raw?.pagination?.total ?? data.length;
+    page = raw?.meta?.page ?? raw?.pagination?.page ?? page;
+    limit = raw?.meta?.limit ?? raw?.pagination?.limit ?? limit;
+  } else if (data && typeof data === "object") {
+    items = data.items ?? data.targets ?? data.data ?? [];
+    page = data.page ?? data.pagination?.page ?? page;
+    limit = data.limit ?? data.pagination?.limit ?? limit;
+    total = data.total ?? data.pagination?.total ?? items.length;
+    total_pages = data.total_pages ?? data.pagination?.total_pages ?? 0;
+  }
+  if (!total_pages || total_pages < 1) total_pages = Math.max(1, Math.ceil(total / Math.max(1, limit)));
+  return { items, page, limit, total, total_pages };
+}
+
 export type ID = string | number;
 
 export interface Employee {
