@@ -35,7 +35,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { api, formatDate, formatRupiah, type Meeting, type MeetingUpdateInput } from "@/lib/api";
+import { api, formatDate, formatRupiah, type Meeting, type MeetingUpdateInput, type ID } from "@/lib/api";
 
 export const Route = createFileRoute("/meetings/$id")({
   component: MeetingDetailPage,
