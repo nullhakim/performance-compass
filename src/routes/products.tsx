@@ -34,7 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { api, type Category, type Product } from "@/lib/api";
 
 export const Route = createFileRoute("/products")({
-  head: () => ({ meta: [{ title: "Products — Performance Tracker" }] }),
+  head: () => ({ meta: [{ title: "Products — Bank Galuh" }] }),
   component: ProductsPage,
 });
 

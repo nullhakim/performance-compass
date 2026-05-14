@@ -26,7 +26,7 @@ import { Label } from "@/components/ui/label";
 import { api, type Category, formatDate } from "@/lib/api";
 
 export const Route = createFileRoute("/categories")({
-  head: () => ({ meta: [{ title: "Categories — Performance Tracker" }] }),
+  head: () => ({ meta: [{ title: "Categories — Bank Galuh" }] }),
   component: CategoriesPage,
 });
 

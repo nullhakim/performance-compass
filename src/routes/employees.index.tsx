@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, type Employee, type EmployeeInput, formatDate } from "@/lib/api";
 
-export const Route = createFileRoute("/employees")({
+export const Route = createFileRoute("/employees/")({
   head: () => ({ meta: [{ title: "Employees — Bank Galuh" }] }),
   component: EmployeesPage,
 });
@@ -142,7 +142,7 @@ function EmployeesPage() {
                 <TableHead>Position</TableHead>
                 <TableHead>Office Location</TableHead>
                 <TableHead>Entry Date</TableHead>
-                <TableHead className="w-[120px] text-right">Actions</TableHead>
+                <TableHead className="w-[150px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -172,10 +172,10 @@ function EmployeesPage() {
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" asChild title="View Performance">
                           <Link to="/employees/$id/performance" params={{ id: String(emp.id) }}>
-                            <TrendingUp className="h-4 w-4 text-emerald-600" />
+                            <TrendingUp className="h-4 w-4 text-indigo-600" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} title="Edit Employee">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} title="Edit">
                           <Pencil className="h-4 w-4" />
                         </Button>
                       </div>

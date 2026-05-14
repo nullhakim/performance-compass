@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarIcon, Loader2, Pencil, Users } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Loader2, Pencil, Users, FileDown } from "lucide-react";
 import { format } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -140,6 +142,128 @@ function MeetingDetailPage() {
     }
   };
 
+  const generatePDF = () => {
+    if (!meeting) return;
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // BANK HEADER WITH LOGO
+    try {
+      doc.addImage("/src/assets/logo-icon.png", "PNG", 20, 12, 18, 18);
+    } catch (e) {
+      doc.setFillColor(79, 70, 229);
+      doc.roundedRect(20, 12, 18, 18, 2, 2, "F");
+    }
+
+    doc.setFontSize(16);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text("Bank Galuh", 42, 20);
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 116, 139);
+    doc.text("(Perumda BPR Galuh Ciamis)", 42, 25);
+    doc.text("Jl. MR Iwa Kusumasoemantri, Kec. Ciamis, Kab. Ciamis, Jawa Barat 46211", 42, 29);
+    doc.text("Telp: (0265) 7579981", 42, 33);
+
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(20, 38, pageWidth - 20, 38);
+
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(79, 70, 229);
+    doc.text("Meeting Minutes", pageWidth / 2, 52, { align: "center" });
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Generated on ${format(new Date(), "PPP p")}`, pageWidth / 2, 60, { align: "center" });
+
+    // Meeting Info Box
+    doc.setDrawColor(241, 245, 249);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(20, 70, pageWidth - 40, 35, 2, 2, "FD");
+
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text(meeting.title || "Untitled Meeting", 25, 78);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Division: ${meeting.division || "N/A"}`, 25, 85);
+    doc.text(`Date: ${formatDate(meeting.meeting_date)}`, 25, 91);
+    doc.text(`Type: ${meeting.meeting_type || "N/A"}`, 25, 97);
+    doc.text(`Lead/Speaker: ${meeting.speaker || "N/A"}`, pageWidth / 2, 85);
+
+    // Summary
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(30, 41, 59);
+    doc.text("Summary & Notes", 20, 115);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const summaryLines = doc.splitTextToSize(meeting.summary || "No summary provided.", pageWidth - 40);
+    doc.text(summaryLines, 20, 122);
+
+    let nextY = 122 + (summaryLines.length * 5) + 8;
+
+    // Participants
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Participants", 20, nextY);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const participants = (meeting.participants as any[])?.map(p => p.employee?.name || p.name).join(", ") || "No participants listed.";
+    const participantLines = doc.splitTextToSize(participants, pageWidth - 40);
+    doc.text(participantLines, 20, nextY + 7);
+
+    nextY = nextY + 7 + (participantLines.length * 5) + 12;
+
+    // Action Items Table
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Action Items", 20, nextY);
+
+    const tableData = (meeting.results ?? []).map((r) => [
+      r.employee?.name || r.employee_name || "Unknown",
+      r.target_description,
+      formatRupiah(r.target_nominal),
+      r.achievement_status || "To Do",
+    ]);
+
+    autoTable(doc, {
+      startY: nextY + 5,
+      head: [["PIC", "Description", "Target Nominal", "Status"]],
+      body: tableData,
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 20, right: 20 },
+      styles: { fontSize: 8, cellPadding: 3 },
+    });
+
+    // Signature Area
+    const finalY = (doc as any).lastAutoTable.finalY + 30;
+    const signatureWidth = 50;
+    const signatureX = pageWidth - 20 - signatureWidth;
+
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "normal");
+    doc.text("Ciamis, " + format(new Date(), "dd MMMM yyyy"), signatureX, finalY);
+    doc.text("Notulis,", signatureX, finalY + 7);
+    
+    doc.setDrawColor(203, 213, 225);
+    doc.line(signatureX, finalY + 35, signatureX + signatureWidth, finalY + 35);
+    doc.setFontSize(9);
+    doc.text("Sekretaris Rapat", signatureX, finalY + 40);
+
+    doc.save(`Meeting_Minutes_${meeting.title.replace(/\s+/g, '_')}_${format(new Date(), "yyyyMMdd")}.pdf`);
+    toast.success("Meeting minutes exported to PDF");
+  };
+
   if (loading && !meeting) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -219,13 +343,23 @@ function MeetingDetailPage() {
                   </p>
                 )}
               </div>
-              <Button
-                onClick={openEdit}
-                className="bg-indigo-600 shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-300"
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Info
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  onClick={generatePDF}
+                  className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                >
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
+                <Button
+                  onClick={openEdit}
+                  className="bg-indigo-600 shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-300"
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Info
+                </Button>
+              </div>
             </CardHeader>
           </Card>
 

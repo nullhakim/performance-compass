@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -80,9 +80,10 @@ import {
   type Product,
   type TargetRow,
 } from "@/lib/api";
+import { RecordAchievementDialog, HistoryDialog, EditNominalDialog } from "@/components/target-dialogs";
 
 export const Route = createFileRoute("/targets")({
-  head: () => ({ meta: [{ title: "Targets & Achievements — Performance Tracker" }] }),
+  head: () => ({ meta: [{ title: "Targets — Bank Galuh" }] }),
   component: TargetsPage,
 });
 
@@ -198,39 +199,61 @@ function TargetsPage() {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Header
-    doc.setFontSize(20);
+    try {
+      doc.addImage("/src/assets/logo-icon.png", "PNG", 20, 12, 18, 18);
+    } catch (e) {
+      doc.setFillColor(79, 70, 229);
+      doc.roundedRect(20, 12, 18, 18, 2, 2, "F");
+    }
+
+    doc.setFontSize(16);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.text("Bank Galuh", 42, 20);
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 116, 139);
+    doc.text("(Perumda BPR Galuh Ciamis)", 42, 25);
+    doc.text("Jl. MR Iwa Kusumasoemantri, Kec. Ciamis, Kab. Ciamis, Jawa Barat 46211", 42, 29);
+    doc.text("Telp: (0265) 7579981", 42, 33);
+
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(20, 38, pageWidth - 20, 38);
+
+    doc.setFontSize(18);
     doc.setTextColor(79, 70, 229);
-    doc.text("Targets & Achievements Report", pageWidth / 2, 20, { align: "center" });
+    doc.text("Targets & Achievements Report", pageWidth / 2, 52, { align: "center" });
 
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
-    doc.text(`Generated on ${format(new Date(), "PPP p")}`, pageWidth / 2, 28, { align: "center" });
-
-    // Filter Info
-    doc.setDrawColor(226, 232, 240);
-    doc.line(20, 35, pageWidth - 20, 35);
-
-    doc.setFontSize(12);
-    doc.setTextColor(30, 41, 59);
-    doc.setFont("helvetica", "bold");
-    doc.text("Filter Criteria", 20, 45);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
     const periodText = month === "0" && year === "0" ? "All-Time" : `${month === "0" ? "All" : MONTHS[Number(month) - 1]} ${year === "0" ? "All" : year}`;
-    const prodText = productId === "all" ? "All Products" : products.find(p => String(p.id) === productId)?.name || "N/A";
+    doc.text(`Period: ${periodText}  |  Generated: ${format(new Date(), "PPP p")}`, pageWidth / 2, 60, { align: "center" });
 
-    doc.text(`Period: ${periodText}`, 20, 52);
-    doc.text(`Product: ${prodText}`, 20, 58);
+    // Summary Grid
+    doc.setDrawColor(241, 245, 249);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(20, 70, (pageWidth - 40) / 2 - 5, 30, 2, 2, "FD");
+    doc.roundedRect(pageWidth / 2 + 5, 70, (pageWidth - 40) / 2 - 5, 30, 2, 2, "FD");
 
-    // Summary Metrics
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
     doc.setFont("helvetica", "bold");
-    doc.text("Current Page Summary", 120, 45);
+    doc.text("FILTER CRITERIA", 25, 77);
+    doc.text("PAGE SUMMARY", pageWidth / 2 + 10, 77);
+
     doc.setFont("helvetica", "normal");
-    doc.text(`Total Target: ${formatRupiah(pageTotalTarget)}`, 120, 52);
-    doc.text(`Total Achievement: ${formatRupiah(pageTotalAch)}`, 120, 58);
-    doc.text(`Overall Progress: ${pagePercentage.toFixed(1)}%`, 120, 64);
+    doc.setTextColor(30, 41, 59);
+    const prodText = productId === "all" ? "All Products" : products.find(p => String(p.id) === productId)?.name || "N/A";
+    doc.text(`Period: ${periodText}`, 25, 84);
+    doc.text(`Product: ${prodText}`, 25, 90);
+
+    doc.text(`Total Target: ${formatRupiah(pageTotalTarget)}`, pageWidth / 2 + 10, 84);
+    doc.text(`Total Achievement: ${formatRupiah(pageTotalAch)}`, pageWidth / 2 + 10, 90);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(79, 70, 229);
+    doc.text(`Progress: ${pagePercentage.toFixed(1)}%`, pageWidth / 2 + 10, 96);
 
     // Table
     const tableData = rows.map((r) => {
@@ -245,22 +268,31 @@ function TargetsPage() {
     });
 
     autoTable(doc, {
-      startY: 75,
-      head: [["Employee", "Product", "Target", "Achievement", "Progress"]],
+      startY: 110,
+      head: [["Employee", "Product", "Target Nominal", "Achievement", "Progress"]],
       body: tableData,
-      headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: 20, right: 20 },
+      styles: { fontSize: 8, cellPadding: 3 },
     });
 
-    // Footer
-    // @ts-ignore
-    const finalY = doc.lastAutoTable?.finalY || 150;
-    doc.setFontSize(8);
-    doc.setTextColor(148, 163, 184);
-    doc.text("This is an automatically generated document from Employee Performance Tracker.", pageWidth / 2, finalY + 20, { align: "center" });
+    // Signature Area
+    const finalY = (doc as any).lastAutoTable.finalY + 30;
+    const signatureWidth = 50;
+    const signatureX = pageWidth - 20 - signatureWidth;
 
-    doc.save(`Targets_Report_${format(new Date(), "yyyyMMdd_HHmm")}.pdf`);
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "normal");
+    doc.text("Ciamis, " + format(new Date(), "dd MMMM yyyy"), signatureX, finalY);
+    doc.text("Verified by,", signatureX, finalY + 7);
+    
+    doc.setDrawColor(203, 213, 225);
+    doc.line(signatureX, finalY + 35, signatureX + signatureWidth, finalY + 35);
+    doc.setFontSize(9);
+    doc.text("Operation Manager", signatureX, finalY + 40);
+
+    doc.save(`Targets_Report_${format(new Date(), "yyyyMMdd")}.pdf`);
     toast.success("PDF Report downloaded");
   };
 
@@ -454,7 +486,17 @@ function TargetsPage() {
                       const pct = r.nominal > 0 ? (r.total_achievement / r.nominal) * 100 : 0;
                       return (
                         <TableRow key={String(r.id)}>
-                          <TableCell className="font-medium">{r.employee?.name ?? "—"}</TableCell>
+                          <TableCell className="font-medium">
+                            {r.employee ? (
+                              <Link 
+                                to="/employees/$id/performance" 
+                                params={{ id: String(r.employee.id) }}
+                                className="hover:text-indigo-600 hover:underline transition-colors"
+                              >
+                                {r.employee.name}
+                              </Link>
+                            ) : "—"}
+                          </TableCell>
                           <TableCell>{r.product?.name ?? "—"}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {MONTHS[(r.month ?? 1) - 1]} {r.year}
@@ -664,208 +706,6 @@ function CreateTargetDialog({
             Save Target
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function EditNominalDialog({
-  row, onOpenChange, onSaved,
-}: {
-  row: TargetRow | null;
-  onOpenChange: (v: boolean) => void;
-  onSaved: () => void;
-}) {
-  const [nominal, setNominal] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => { if (row) setNominal(String(row.nominal ?? "")); }, [row]);
-
-  const submit = async () => {
-    if (!row) return;
-    if (!nominal) return toast.error("Nominal is required");
-    setSaving(true);
-    try {
-      await api.updateTargetNominal(row.id, Number(nominal));
-      toast.success("Target nominal updated");
-      onSaved();
-    } catch (err) {
-      toast.error("Failed to update", { description: (err as Error).message });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={!!row} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit Nominal</DialogTitle>
-          <DialogDescription>
-            Update nominal for <b>{row?.employee?.name}</b> — <b>{row?.product?.name}</b>.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-1.5">
-          <Label>Nominal (IDR)</Label>
-          <Input type="number" min={0} value={nominal} onChange={(e) => setNominal(e.target.value)} />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={saving}>
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function RecordAchievementDialog({
-  row, onOpenChange, onSaved,
-}: {
-  row: TargetRow | null;
-  onOpenChange: (v: boolean) => void;
-  onSaved: () => void;
-}) {
-  const [nominal, setNominal] = useState("");
-  const [description, setDescription] = useState("");
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (row) { setNominal(""); setDescription(""); setDate(new Date()); }
-  }, [row]);
-
-  const submit = async () => {
-    if (!row) return;
-    if (!nominal || !description || !date) {
-      toast.error("All fields are required");
-      return;
-    }
-    setSaving(true);
-    try {
-      const closingIso = new Date(date).toISOString().replace(/\.\d{3}Z$/, "Z");
-      await api.createAchievement({
-        target_id: row.id,
-        nominal: Number(nominal),
-        description,
-        closing_date: closingIso,
-      });
-      toast.success("Achievement recorded");
-      onSaved();
-    } catch (err) {
-      toast.error("Failed to record", { description: (err as Error).message });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={!!row} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Record Achievement</DialogTitle>
-          <DialogDescription>
-            For <b>{row?.employee?.name}</b> — <b>{row?.product?.name}</b>
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4">
-          <div className="space-y-1.5">
-            <Label>Nominal (IDR) *</Label>
-            <Input type="number" min={0} value={nominal} onChange={(e) => setNominal(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Description *</Label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Closing details..." />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Closing Date *</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-auto p-0">
-                <Calendar mode="single" selected={date} onSelect={setDate} initialFocus className={cn("p-3 pointer-events-auto")} />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={saving}>
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Achievement
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function HistoryDialog({
-  row, onOpenChange,
-}: {
-  row: TargetRow | null;
-  onOpenChange: (v: boolean) => void;
-}) {
-  const [items, setItems] = useState<Achievement[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!row) return;
-    setLoading(true);
-    setItems([]);
-    api.getTargetAchievements(row.id)
-      .then((d) => setItems(d || []))
-      .catch((err: Error) => toast.error("Failed to load history", { description: err.message }))
-      .finally(() => setLoading(false));
-  }, [row]);
-
-  const total = useMemo(() => items.reduce((s, a) => s + (a.nominal || 0), 0), [items]);
-
-  return (
-    <Dialog open={!!row} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Achievement History</DialogTitle>
-          <DialogDescription>
-            Ledger for <b>{row?.employee?.name}</b> — <b>{row?.product?.name}</b>
-          </DialogDescription>
-        </DialogHeader>
-        {loading ? (
-          <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...
-          </div>
-        ) : items.length === 0 ? (
-          <div className="py-10 text-center text-sm text-muted-foreground">No achievements recorded yet.</div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Closing Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Nominal</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((a) => (
-                <TableRow key={String(a.id)}>
-                  <TableCell>{formatDate(a.closing_date)}</TableCell>
-                  <TableCell className="max-w-[280px] truncate" title={a.description}>{a.description}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatRupiah(a.nominal)}</TableCell>
-                </TableRow>
-              ))}
-              <TableRow>
-                <TableCell colSpan={2} className="font-semibold">Total</TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">{formatRupiah(total)}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        )}
       </DialogContent>
     </Dialog>
   );

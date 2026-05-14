@@ -1,5 +1,5 @@
-// Base API client for Employee Performance Tracker
-const BASE_URL = "http://70.153.137.117:8083/api";
+// Base API client for Bank Galuh (Perumda BPR Galuh Ciamis)
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
 type ApiSuccess<T> = { message: string; data: T };
 type ApiError = { error: string; detail?: string };
@@ -131,18 +131,21 @@ export interface Product {
 }
 
 export interface TargetDetail {
-  target_id?: ID;
-  product_id?: ID;
-  product_name: string;
-  nominal_target: number;
+  id: ID;
+  nominal: number;
   total_achievement: number;
+  product: {
+    id: ID;
+    name: string;
+  };
 }
 
 export interface PerformanceResult {
   total_target: number;
   total_achievement: number;
   percentage: number;
-  details: TargetDetail[];
+  targets: TargetDetail[];
+  employee?: Employee;
 }
 
 export interface Target {
@@ -172,12 +175,18 @@ export type ProductInput = { name: string; category_id: ID };
 export const api = {
   // Employees
   getEmployees: () => request<Employee[]>("/employees"),
+  getEmployee: (id: ID) => request<Employee>(`/employees/${id}`),
   createEmployee: (body: EmployeeInput) =>
     request<Employee>("/employees", { method: "POST", body: JSON.stringify(body) }),
   updateEmployee: (id: ID, body: EmployeeInput) =>
     request<Employee>(`/employees/${id}`, { method: "PUT", body: JSON.stringify(body) }),
-  getPerformance: (employeeId: ID, month: number, year: number) =>
-    request<PerformanceResult>(`/employees/${employeeId}/performance?month=${month}&year=${year}`),
+  getPerformance: (employeeId: ID, month: number, year: number) => {
+    const q = new URLSearchParams();
+    if (month > 0) q.set("month", String(month));
+    if (year > 0) q.set("year", String(year));
+    const qs = q.toString();
+    return request<PerformanceResult>(`/employees/${employeeId}/performance${qs ? "?" + qs : ""}`);
+  },
 
   // Categories
   getCategories: () => request<Category[]>("/categories"),

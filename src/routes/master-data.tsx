@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FolderTree, Package, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/master-data")({
-  head: () => ({ meta: [{ title: "Master Data — Performance Tracker" }] }),
+  head: () => ({ meta: [{ title: "Master Data — Bank Galuh" }] }),
   component: MasterDataPage,
 });
 

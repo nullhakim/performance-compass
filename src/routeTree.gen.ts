@@ -17,7 +17,9 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MeetingsIndexRouteImport } from './routes/meetings.index'
+import { Route as EmployeesIndexRouteImport } from './routes/employees.index'
 import { Route as MeetingsIdRouteImport } from './routes/meetings.$id'
+import { Route as EmployeesIdPerformanceRouteImport } from './routes/employees_.$id.performance'
 
 const TargetsRoute = TargetsRouteImport.update({
   id: '/targets',
@@ -59,9 +61,19 @@ const MeetingsIndexRoute = MeetingsIndexRouteImport.update({
   path: '/meetings/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmployeesIndexRoute = EmployeesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EmployeesRoute,
+} as any)
 const MeetingsIdRoute = MeetingsIdRouteImport.update({
   id: '/meetings/$id',
   path: '/meetings/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmployeesIdPerformanceRoute = EmployeesIdPerformanceRouteImport.update({
+  id: '/employees_/$id/performance',
+  path: '/employees/$id/performance',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -69,35 +81,40 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
   '/dashboard': typeof DashboardRoute
-  '/employees': typeof EmployeesRoute
+  '/employees': typeof EmployeesRouteWithChildren
   '/master-data': typeof MasterDataRoute
   '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
   '/meetings/$id': typeof MeetingsIdRoute
+  '/employees/': typeof EmployeesIndexRoute
   '/meetings/': typeof MeetingsIndexRoute
+  '/employees/$id/performance': typeof EmployeesIdPerformanceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
   '/dashboard': typeof DashboardRoute
-  '/employees': typeof EmployeesRoute
   '/master-data': typeof MasterDataRoute
   '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
   '/meetings/$id': typeof MeetingsIdRoute
+  '/employees': typeof EmployeesIndexRoute
   '/meetings': typeof MeetingsIndexRoute
+  '/employees/$id/performance': typeof EmployeesIdPerformanceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
   '/dashboard': typeof DashboardRoute
-  '/employees': typeof EmployeesRoute
+  '/employees': typeof EmployeesRouteWithChildren
   '/master-data': typeof MasterDataRoute
   '/products': typeof ProductsRoute
   '/targets': typeof TargetsRoute
   '/meetings/$id': typeof MeetingsIdRoute
+  '/employees/': typeof EmployeesIndexRoute
   '/meetings/': typeof MeetingsIndexRoute
+  '/employees_/$id/performance': typeof EmployeesIdPerformanceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,18 +127,21 @@ export interface FileRouteTypes {
     | '/products'
     | '/targets'
     | '/meetings/$id'
+    | '/employees/'
     | '/meetings/'
+    | '/employees/$id/performance'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/categories'
     | '/dashboard'
-    | '/employees'
     | '/master-data'
     | '/products'
     | '/targets'
     | '/meetings/$id'
+    | '/employees'
     | '/meetings'
+    | '/employees/$id/performance'
   id:
     | '__root__'
     | '/'
@@ -132,19 +152,22 @@ export interface FileRouteTypes {
     | '/products'
     | '/targets'
     | '/meetings/$id'
+    | '/employees/'
     | '/meetings/'
+    | '/employees_/$id/performance'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CategoriesRoute: typeof CategoriesRoute
   DashboardRoute: typeof DashboardRoute
-  EmployeesRoute: typeof EmployeesRoute
+  EmployeesRoute: typeof EmployeesRouteWithChildren
   MasterDataRoute: typeof MasterDataRoute
   ProductsRoute: typeof ProductsRoute
   TargetsRoute: typeof TargetsRoute
   MeetingsIdRoute: typeof MeetingsIdRoute
   MeetingsIndexRoute: typeof MeetingsIndexRoute
+  EmployeesIdPerformanceRoute: typeof EmployeesIdPerformanceRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -205,6 +228,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MeetingsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/employees/': {
+      id: '/employees/'
+      path: '/'
+      fullPath: '/employees/'
+      preLoaderRoute: typeof EmployeesIndexRouteImport
+      parentRoute: typeof EmployeesRoute
+    }
     '/meetings/$id': {
       id: '/meetings/$id'
       path: '/meetings/$id'
@@ -212,19 +242,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MeetingsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/employees_/$id/performance': {
+      id: '/employees_/$id/performance'
+      path: '/employees/$id/performance'
+      fullPath: '/employees/$id/performance'
+      preLoaderRoute: typeof EmployeesIdPerformanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
+
+interface EmployeesRouteChildren {
+  EmployeesIndexRoute: typeof EmployeesIndexRoute
+}
+
+const EmployeesRouteChildren: EmployeesRouteChildren = {
+  EmployeesIndexRoute: EmployeesIndexRoute,
+}
+
+const EmployeesRouteWithChildren = EmployeesRoute._addFileChildren(
+  EmployeesRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CategoriesRoute: CategoriesRoute,
   DashboardRoute: DashboardRoute,
-  EmployeesRoute: EmployeesRoute,
+  EmployeesRoute: EmployeesRouteWithChildren,
   MasterDataRoute: MasterDataRoute,
   ProductsRoute: ProductsRoute,
   TargetsRoute: TargetsRoute,
   MeetingsIdRoute: MeetingsIdRoute,
   MeetingsIndexRoute: MeetingsIndexRoute,
+  EmployeesIdPerformanceRoute: EmployeesIdPerformanceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

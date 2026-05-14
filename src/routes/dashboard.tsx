@@ -36,7 +36,7 @@ import { api, fetchTargets, formatRupiah, type Product, type TargetRow } from "@
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Performance Dashboard — Employee Performance Tracker" },
+      { title: "Performance Dashboard — Bank Galuh" },
       { name: "description", content: "Company-wide performance overview." },
     ],
   }),

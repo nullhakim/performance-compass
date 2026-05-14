@@ -6,8 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Super App Internal — Main Menu" },
-      { name: "description", content: "Gerbang utama Super App Internal: Employee Tracker dan Meeting Minutes." },
+      { title: "Super App Internal — Bank Galuh" },
+      { name: "description", content: "Gerbang utama Super App Internal Bank Galuh." },
     ],
   }),
   component: LandingPage,
@@ -26,12 +26,12 @@ function LandingPage() {
       <header className="border-b bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Building2 className="h-5 w-5" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white p-1 shadow-sm border">
+              <img src="/src/assets/logo-icon.png" alt="Bank Galuh" className="h-full w-full object-contain" />
             </div>
             <div className="leading-tight">
-              <p className="text-sm font-semibold">Super App Internal</p>
-              <p className="text-xs text-muted-foreground">Banking Performance Suite</p>
+              <p className="text-sm font-bold text-slate-900">Super App Internal</p>
+              <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Bank Galuh</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -78,7 +78,7 @@ function LandingPage() {
         </div>
 
         <p className="mt-12 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Super App Internal · Banking Institution
+          © {new Date().getFullYear()} Super App Internal · Bank Galuh (Perumda BPR Galuh Ciamis)
         </p>
       </main>
     </div>
