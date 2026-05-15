@@ -47,7 +47,7 @@ export function AppSidebar() {
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-sidebar text-sidebar-foreground md:flex">
       <div className="flex h-14 items-center gap-3 border-b border-sidebar-border px-5">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white ring-1 ring-white/10">
-          <img src="/src/assets/logo-icon.png" alt="Bank Galuh" className="h-full w-full object-contain p-1" />
+          <img src="/logo-icon.png" alt="Bank Galuh" className="h-full w-full object-contain p-1" />
         </div>
         <div className="flex min-w-0 flex-col leading-tight">
           <p className="truncate text-[13px] font-semibold text-sidebar-foreground">Bank Galuh</p>

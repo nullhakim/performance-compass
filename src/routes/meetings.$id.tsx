@@ -165,7 +165,7 @@ function MeetingDetailPage() {
     doc.rect(0, 32, pageWidth, 1.2, "F");
 
     try {
-      doc.addImage("/src/assets/logo-icon.png", "PNG", M, 8, 16, 16);
+      doc.addImage("/logo-icon.png", "PNG", M, 8, 16, 16);
     } catch (e) {
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(M, 8, 16, 16, 2, 2, "F");
@@ -235,7 +235,7 @@ function MeetingDetailPage() {
     doc.setFontSize(11);
     doc.setTextColor(...INK);
     doc.text(meeting.speaker || "—", rx, valueY);
-    
+
     const participantCount = (meeting.participants as any[])?.length || 0;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
@@ -249,16 +249,16 @@ function MeetingDetailPage() {
     doc.setFontSize(10);
     doc.setTextColor(...NAVY);
     doc.text("Summary & Notes", M, y);
-    
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(...INK);
     y += 6;
-    
+
     const combinedNotes = `Summary:\n${meeting.summary || "—"}\n\nNotes:\n${meeting.notes || "—"}`;
     const notesLines = doc.splitTextToSize(combinedNotes, pageWidth - 2 * M);
     doc.text(notesLines, M, y);
-    
+
     y += (notesLines.length * 4) + 6;
 
     // ===== TABLE (ACTION ITEMS) =====
@@ -538,128 +538,128 @@ function MeetingDetailPage() {
           </Card>
         </div>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-2xl border-none p-0 shadow-2xl">
-          <DialogHeader className="px-6 py-4">
-            <DialogTitle className="text-xl font-bold text-slate-900">Edit Informasi Dasar</DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Perbarui detail utama rapat. Data peserta dan tugas tidak akan terpengaruh.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-5 px-6 py-6">
-            <div className="grid gap-5 md:grid-cols-2">
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="max-w-2xl border-none p-0 shadow-2xl">
+            <DialogHeader className="px-6 py-4">
+              <DialogTitle className="text-xl font-bold text-slate-900">Edit Informasi Dasar</DialogTitle>
+              <DialogDescription className="text-slate-500">
+                Perbarui detail utama rapat. Data peserta dan tugas tidak akan terpengaruh.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-5 px-6 py-6">
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Divisi</Label>
+                  <Input
+                    className="bg-slate-50 focus:bg-white"
+                    placeholder="Contoh: Operasional"
+                    value={division}
+                    onChange={(e) => setDivision(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tipe Rapat</Label>
+                  <Select value={meetingType} onValueChange={setMeetingType}>
+                    <SelectTrigger className="bg-slate-50 focus:bg-white"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {MEETING_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Divisi</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Judul Rapat</Label>
                 <Input
                   className="bg-slate-50 focus:bg-white"
-                  placeholder="Contoh: Operasional"
-                  value={division}
-                  onChange={(e) => setDivision(e.target.value)}
+                  placeholder="Judul agenda rapat"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tanggal Rapat</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start border-slate-200 bg-slate-50 text-left font-normal focus:bg-white",
+                          !meetingDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {meetingDate ? format(meetingDate, "PPP") : "Pilih tanggal"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={meetingDate}
+                        onSelect={setMeetingDate}
+                        initialFocus
+                        className="p-3"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pembicara / Lead</Label>
+                  <Input
+                    className="bg-slate-50 focus:bg-white"
+                    placeholder="Nama pembicara"
+                    value={speaker}
+                    onChange={(e) => setSpeaker(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Ringkasan (Summary)</Label>
+                <Textarea
+                  className="min-h-[80px] bg-slate-50 focus:bg-white"
+                  placeholder="Ringkasan hasil rapat..."
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tipe Rapat</Label>
-                <Select value={meetingType} onValueChange={setMeetingType}>
-                  <SelectTrigger className="bg-slate-50 focus:bg-white"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {MEETING_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Judul Rapat</Label>
-              <Input
-                className="bg-slate-50 focus:bg-white"
-                placeholder="Judul agenda rapat"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tanggal Rapat</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start border-slate-200 bg-slate-50 text-left font-normal focus:bg-white",
-                        !meetingDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {meetingDate ? format(meetingDate, "PPP") : "Pilih tanggal"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={meetingDate}
-                      onSelect={setMeetingDate}
-                      initialFocus
-                      className="p-3"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pembicara / Lead</Label>
-                <Input
-                  className="bg-slate-50 focus:bg-white"
-                  placeholder="Nama pembicara"
-                  value={speaker}
-                  onChange={(e) => setSpeaker(e.target.value)}
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Catatan Tambahan (Notes)</Label>
+                <Textarea
+                  className="min-h-[100px] bg-slate-50 focus:bg-white"
+                  placeholder="Detail catatan penting lainnya..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Ringkasan (Summary)</Label>
-              <Textarea
-                className="min-h-[80px] bg-slate-50 focus:bg-white"
-                placeholder="Ringkasan hasil rapat..."
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Catatan Tambahan (Notes)</Label>
-              <Textarea
-                className="min-h-[100px] bg-slate-50 focus:bg-white"
-                placeholder="Detail catatan penting lainnya..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter className="px-6 py-4">
-            <Button
-              variant="ghost"
-              onClick={() => setEditOpen(false)}
-              disabled={saving}
-              className="text-slate-500 hover:bg-slate-200"
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-[#153160] shadow-md shadow-[#153160]/20 hover:bg-[#153160]/90"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan Perubahan"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="px-6 py-4">
+              <Button
+                variant="ghost"
+                onClick={() => setEditOpen(false)}
+                disabled={saving}
+                className="text-slate-500 hover:bg-slate-200"
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-[#153160] shadow-md shadow-[#153160]/20 hover:bg-[#153160]/90"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  "Simpan Perubahan"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

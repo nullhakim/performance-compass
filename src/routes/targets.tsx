@@ -290,7 +290,7 @@ function TargetsPage() {
 
     // Logo
     try {
-      doc.addImage("/src/assets/logo-icon.png", "PNG", M, 8, 16, 16);
+      doc.addImage("/logo-icon.png", "PNG", M, 8, 16, 16);
     } catch (e) {
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(M, 8, 16, 16, 2, 2, "F");
@@ -651,8 +651,8 @@ function TargetsPage() {
                         <TableRow key={String(r.id)}>
                           <TableCell className="font-medium">
                             {r.employee ? (
-                              <Link 
-                                to="/employees/$id/performance" 
+                              <Link
+                                to="/employees/$id/performance"
                                 params={{ id: String(r.employee.id) }}
                                 className="hover:text-indigo-600 hover:underline transition-colors"
                               >

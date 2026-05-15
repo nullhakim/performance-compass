@@ -27,7 +27,7 @@ function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-8">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white ring-1 ring-border">
-              <img src="/src/assets/logo-icon.png" alt="Bank Galuh" className="h-full w-full object-contain p-1" />
+              <img src="/logo-icon.png" alt="Bank Galuh" className="h-full w-full object-contain p-1" />
             </div>
             <div className="leading-tight">
               <p className="text-[13px] font-semibold text-foreground">Super App Internal</p>

@@ -102,11 +102,11 @@ function EmployeePerformancePage() {
   console.log("Rendering EmployeePerformancePage");
   const { id } = Route.useParams();
   const now = new Date();
-  
+
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [performance, setPerformance] = useState<PerformanceResult | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  
+
   const [month, setMonth] = useState<string>(String(now.getMonth() + 1));
   const [year, setYear] = useState<string>(String(now.getFullYear()));
   const [productId, setProductId] = useState<string>("all");
@@ -280,7 +280,7 @@ function EmployeePerformancePage() {
 
     // Logo
     try {
-      doc.addImage("/src/assets/logo-icon.png", "PNG", M, 8, 16, 16);
+      doc.addImage("/logo-icon.png", "PNG", M, 8, 16, 16);
     } catch (e) {
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(M, 8, 16, 16, 2, 2, "F");
@@ -441,8 +441,8 @@ function EmployeePerformancePage() {
   };
 
   return (
-    <DashboardLayout 
-      title={employee ? `${employee.name}'s Performance` : "Employee Performance"} 
+    <DashboardLayout
+      title={employee ? `${employee.name}'s Performance` : "Employee Performance"}
       subtitle="Detailed target and achievement breakdown for a specific employee."
     >
       <div className="mb-6 flex items-center gap-4">
@@ -458,7 +458,7 @@ function EmployeePerformancePage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base font-semibold">Period Selection</CardTitle>
           <div className="flex gap-2">
-             <Button variant="outline" size="sm" onClick={generatePDF} className="h-8 gap-2">
+            <Button variant="outline" size="sm" onClick={generatePDF} className="h-8 gap-2">
               <FileDown className="h-3.5 w-3.5" /> Export PDF
             </Button>
           </div>
@@ -676,7 +676,7 @@ function EmployeePerformancePage() {
                     month: Number(month),
                     year: Number(year),
                   } as any;
-                  
+
                   return (
                     <TableRow key={idx}>
                       <TableCell className="font-medium">{d.product.name}</TableCell>
