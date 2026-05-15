@@ -132,6 +132,7 @@ export interface Product {
 
 export interface TargetDetail {
   id: ID;
+  target_id?: ID;
   nominal: number;
   total_achievement: number;
   product: {
