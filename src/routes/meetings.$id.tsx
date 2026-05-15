@@ -146,87 +146,122 @@ function MeetingDetailPage() {
     if (!meeting) return;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const M = 18;
 
-    // BANK HEADER WITH LOGO
+    // Brand colors
+    const NAVY: [number, number, number] = [15, 27, 61];      // #0F1B3D
+    const NAVY_SOFT: [number, number, number] = [30, 58, 95]; // #1E3A5F
+    const GOLD: [number, number, number] = [201, 168, 76];    // #C9A84C
+    const INK: [number, number, number] = [30, 41, 59];
+    const MUTED: [number, number, number] = [110, 120, 140];
+    const LINE: [number, number, number] = [226, 232, 240];
+    const ROW_ALT: [number, number, number] = [248, 250, 252];
+
+    // ===== HEADER BAR =====
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, pageWidth, 32, "F");
+    doc.setFillColor(...GOLD);
+    doc.rect(0, 32, pageWidth, 1.2, "F");
+
     try {
-      doc.addImage("/src/assets/logo-icon.png", "PNG", 20, 12, 18, 18);
+      doc.addImage("/src/assets/logo-icon.png", "PNG", M, 8, 16, 16);
     } catch (e) {
-      doc.setFillColor(79, 70, 229);
-      doc.roundedRect(20, 12, 18, 18, 2, 2, "F");
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(M, 8, 16, 16, 2, 2, "F");
     }
 
-    doc.setFontSize(16);
-    doc.setTextColor(30, 41, 59);
+    doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
-    doc.text("Bank Galuh", 42, 20);
+    doc.setFontSize(13);
+    doc.text("BANK GALUH", M + 21, 15);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(210, 220, 235);
+    doc.text("Perumda BPR Galuh Ciamis", M + 21, 19.8);
+    doc.text("Jl. MR Iwa Kusumasoemantri, Ciamis, Jawa Barat 46211  ·  Telp (0265) 7579981", M + 21, 23.6);
+
+    doc.setFontSize(7.5);
+    doc.setTextColor(...GOLD);
+    doc.text("INTERNAL DOCUMENT", pageWidth - M, 13.5, { align: "right" });
+    doc.setTextColor(220, 230, 245);
+    doc.setFontSize(7);
+    doc.text(`Generated · ${format(new Date(), "dd MMM yyyy, HH:mm")}`, pageWidth - M, 18, { align: "right" });
+
+    // ===== TITLE =====
+    let y = 46;
+    doc.setTextColor(...NAVY);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.text("Meeting Minutes", M, y);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
+    y += 5.5;
+    doc.text(`Division: ${meeting.division || "N/A"}  ·  Type: ${meeting.meeting_type || "N/A"}`, M, y);
+
+    // ===== INFO PANEL =====
+    y += 6;
+    doc.setDrawColor(...LINE);
+    doc.setFillColor(252, 253, 255);
+    doc.roundedRect(M, y, pageWidth - 2 * M, 32, 1.5, 1.5, "FD");
+
+    const colW = (pageWidth - 2 * M) / 2;
+    const padX = 6;
+    const labelY = y + 7;
+    const valueY = y + 13;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...MUTED);
+    doc.text("MEETING TITLE", M + padX, labelY);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...INK);
+    doc.text(meeting.title || "Untitled Meeting", M + padX, valueY);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...MUTED);
+    doc.text(`Date: ${formatDate(meeting.meeting_date)}`, M + padX, valueY + 5);
+
+    const rx = M + colW + padX;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...MUTED);
+    doc.text("SPEAKER / LEAD", rx, labelY);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...INK);
+    doc.text(meeting.speaker || "—", rx, valueY);
     
-    doc.setFontSize(8);
+    const participantCount = (meeting.participants as any[])?.length || 0;
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 116, 139);
-    doc.text("(Perumda BPR Galuh Ciamis)", 42, 25);
-    doc.text("Jl. MR Iwa Kusumasoemantri, Kec. Ciamis, Kab. Ciamis, Jawa Barat 46211", 42, 29);
-    doc.text("Telp: (0265) 7579981", 42, 33);
+    doc.setFontSize(8.5);
+    doc.setTextColor(...MUTED);
+    doc.text(`Participants: ${participantCount} people`, rx, valueY + 5);
 
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.5);
-    doc.line(20, 38, pageWidth - 20, 38);
+    y += 38;
 
-    // Title
-    doc.setFontSize(20);
-    doc.setTextColor(79, 70, 229);
-    doc.text("Meeting Minutes", pageWidth / 2, 52, { align: "center" });
-
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Generated on ${format(new Date(), "PPP p")}`, pageWidth / 2, 60, { align: "center" });
-
-    // Meeting Info Box
-    doc.setDrawColor(241, 245, 249);
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(20, 70, pageWidth - 40, 35, 2, 2, "FD");
-
+    // ===== SUMMARY & NOTES =====
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
-    doc.setTextColor(30, 41, 59);
-    doc.setFont("helvetica", "bold");
-    doc.text(meeting.title || "Untitled Meeting", 25, 78);
-
+    doc.setTextColor(...NAVY);
+    doc.text("Summary & Notes", M, y);
+    
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.setTextColor(71, 85, 105);
-    doc.text(`Division: ${meeting.division || "N/A"}`, 25, 85);
-    doc.text(`Date: ${formatDate(meeting.meeting_date)}`, 25, 91);
-    doc.text(`Type: ${meeting.meeting_type || "N/A"}`, 25, 97);
-    doc.text(`Lead/Speaker: ${meeting.speaker || "N/A"}`, pageWidth / 2, 85);
+    doc.setTextColor(...INK);
+    y += 6;
+    
+    const combinedNotes = `Summary:\n${meeting.summary || "—"}\n\nNotes:\n${meeting.notes || "—"}`;
+    const notesLines = doc.splitTextToSize(combinedNotes, pageWidth - 2 * M);
+    doc.text(notesLines, M, y);
+    
+    y += (notesLines.length * 4) + 6;
 
-    // Summary
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(30, 41, 59);
-    doc.text("Summary & Notes", 20, 115);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const summaryLines = doc.splitTextToSize(meeting.summary || "No summary provided.", pageWidth - 40);
-    doc.text(summaryLines, 20, 122);
-
-    let nextY = 122 + (summaryLines.length * 5) + 8;
-
-    // Participants
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("Participants", 20, nextY);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const participants = (meeting.participants as any[])?.map(p => p.employee?.name || p.name).join(", ") || "No participants listed.";
-    const participantLines = doc.splitTextToSize(participants, pageWidth - 40);
-    doc.text(participantLines, 20, nextY + 7);
-
-    nextY = nextY + 7 + (participantLines.length * 5) + 12;
-
-    // Action Items Table
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("Action Items", 20, nextY);
-
+    // ===== TABLE (ACTION ITEMS) =====
     const tableData = (meeting.results ?? []).map((r) => [
       r.employee?.name || r.employee_name || "Unknown",
       r.target_description,
@@ -235,30 +270,57 @@ function MeetingDetailPage() {
     ]);
 
     autoTable(doc, {
-      startY: nextY + 5,
+      startY: y,
       head: [["PIC", "Description", "Target Nominal", "Status"]],
       body: tableData,
-      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: 20, right: 20 },
-      styles: { fontSize: 8, cellPadding: 3 },
+      theme: "plain",
+      headStyles: {
+        fillColor: NAVY_SOFT,
+        textColor: 255,
+        fontStyle: "bold",
+        fontSize: 8.5,
+        cellPadding: { top: 3.5, bottom: 3.5, left: 5, right: 5 },
+      },
+      bodyStyles: {
+        fontSize: 8.5,
+        textColor: INK,
+        cellPadding: { top: 3.5, bottom: 3.5, left: 5, right: 5 },
+        lineColor: LINE,
+        lineWidth: { bottom: 0.1 } as any,
+      },
+      alternateRowStyles: { fillColor: ROW_ALT },
+      columnStyles: {
+        2: { halign: "right" },
+        3: { fontStyle: "bold" },
+      },
+      margin: { left: M, right: M },
     });
 
-    // Signature Area
-    const finalY = (doc as any).lastAutoTable.finalY + 30;
-    const signatureWidth = 50;
-    const signatureX = pageWidth - 20 - signatureWidth;
+    // ===== SIGNATURE =====
+    const finalY = (doc as any).lastAutoTable.finalY + 18;
+    const sigW = 58;
+    const sigX = pageWidth - M - sigW;
 
-    doc.setFontSize(10);
-    doc.setTextColor(30, 41, 59);
     doc.setFont("helvetica", "normal");
-    doc.text("Ciamis, " + format(new Date(), "dd MMMM yyyy"), signatureX, finalY);
-    doc.text("Notulis,", signatureX, finalY + 7);
-    
-    doc.setDrawColor(203, 213, 225);
-    doc.line(signatureX, finalY + 35, signatureX + signatureWidth, finalY + 35);
     doc.setFontSize(9);
-    doc.text("Sekretaris Rapat", signatureX, finalY + 40);
+    doc.setTextColor(...INK);
+    doc.text(`Ciamis, ${format(new Date(), "dd MMMM yyyy")}`, sigX, finalY);
+    doc.text("Notulis,", sigX, finalY + 5);
+
+    doc.setDrawColor(...LINE);
+    doc.setLineWidth(0.3);
+    doc.line(sigX, finalY + 28, sigX + sigW, finalY + 28);
+    doc.setFontSize(8.5);
+    doc.setTextColor(...MUTED);
+    doc.text("Sekretaris Rapat", sigX, finalY + 33);
+
+    // ===== FOOTER =====
+    doc.setDrawColor(...LINE);
+    doc.line(M, pageHeight - 14, pageWidth - M, pageHeight - 14);
+    doc.setFontSize(7);
+    doc.setTextColor(...MUTED);
+    doc.text("Bank Galuh · Confidential — for internal use only", M, pageHeight - 9);
+    doc.text(`Page 1 of 1`, pageWidth - M, pageHeight - 9, { align: "right" });
 
     doc.save(`Meeting_Minutes_${meeting.title.replace(/\s+/g, '_')}_${format(new Date(), "yyyyMMdd")}.pdf`);
     toast.success("Meeting minutes exported to PDF");
@@ -269,8 +331,8 @@ function MeetingDetailPage() {
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
           <div className="relative flex h-12 w-12 items-center justify-center">
-            <div className="absolute inset-0 animate-ping rounded-full bg-indigo-500 opacity-20"></div>
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            <div className="absolute inset-0 animate-ping rounded-full bg-[#153160] opacity-20"></div>
+            <Loader2 className="h-8 w-8 animate-spin text-[#153160]" />
           </div>
           <p className="animate-pulse text-sm font-medium text-slate-500">Memuat detail rapat...</p>
         </div>
@@ -307,7 +369,7 @@ function MeetingDetailPage() {
             asChild
             variant="ghost"
             size="sm"
-            className="group -ml-2 text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm"
+            className="group -ml-2 text-slate-500 hover:bg-white hover:text-[#153160] hover:shadow-sm"
           >
             <Link to="/meetings" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
@@ -317,13 +379,11 @@ function MeetingDetailPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Card 1: Header Info */}
-          <Card className="overflow-hidden border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-md lg:col-span-3">
-            <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+          <Card className="overflow-hidden border-border/60 shadow-sm lg:col-span-3">
             <CardHeader className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200/50">
+                  <Badge className="bg-[#153160]/5 text-[#153160] hover:bg-[#153160]/10 border-[#153160]/20">
                     {meeting.division}
                   </Badge>
                   <Badge variant="outline" className="border-slate-200 text-slate-600">
@@ -347,14 +407,14 @@ function MeetingDetailPage() {
                 <Button
                   variant="outline"
                   onClick={generatePDF}
-                  className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                  className="border-[#153160]/20 text-[#153160] hover:bg-[#153160]/5"
                 >
                   <FileDown className="mr-2 h-4 w-4" />
                   Export PDF
                 </Button>
                 <Button
                   onClick={openEdit}
-                  className="bg-indigo-600 shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-300"
+                  className="bg-[#153160] shadow-lg shadow-[#153160]/20 hover:bg-[#153160]/90 hover:shadow-[#153160]/30"
                 >
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit Info
@@ -364,13 +424,13 @@ function MeetingDetailPage() {
           </Card>
 
           {/* Card 2: Ringkasan */}
-          <Card className="border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-md lg:col-span-2">
+          <Card className="border-border/60 shadow-sm lg:col-span-2">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-slate-800">Ringkasan & Catatan</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="rounded-xl border border-indigo-100/50 bg-indigo-50/30 p-4">
-                <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-600/80">Summary</h4>
+              <div className="rounded-xl border border-[#153160]/20 bg-[#153160]/5 p-4">
+                <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#153160]/80">Summary</h4>
                 <p className="text-sm leading-relaxed text-slate-700">
                   {meeting.summary || "Tidak ada ringkasan tersedia."}
                 </p>
@@ -385,10 +445,10 @@ function MeetingDetailPage() {
           </Card>
 
           {/* Card 3: Peserta */}
-          <Card className="border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-md">
+          <Card className="border-border/60 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800">
-                <Users className="h-5 w-5 text-indigo-500" />
+                <Users className="h-5 w-5 text-[#153160]" />
                 Peserta
               </CardTitle>
             </CardHeader>
@@ -415,7 +475,7 @@ function MeetingDetailPage() {
           </Card>
 
           {/* Card 4: Tugas */}
-          <Card className="overflow-hidden border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-md lg:col-span-3">
+          <Card className="overflow-hidden border-border/60 shadow-sm lg:col-span-3">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold text-slate-800">Daftar Tugas (Action Items)</CardTitle>
             </CardHeader>
@@ -477,11 +537,10 @@ function MeetingDetailPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-2xl border-none p-0 shadow-2xl">
-          <DialogHeader className="bg-slate-50/80 px-6 py-4">
+          <DialogHeader className="px-6 py-4">
             <DialogTitle className="text-xl font-bold text-slate-900">Edit Informasi Dasar</DialogTitle>
             <DialogDescription className="text-slate-500">
               Perbarui detail utama rapat. Data peserta dan tugas tidak akan terpengaruh.
@@ -575,7 +634,7 @@ function MeetingDetailPage() {
               />
             </div>
           </div>
-          <DialogFooter className="bg-slate-50/80 px-6 py-4">
+          <DialogFooter className="px-6 py-4">
             <Button
               variant="ghost"
               onClick={() => setEditOpen(false)}
@@ -587,7 +646,7 @@ function MeetingDetailPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-indigo-600 shadow-md shadow-indigo-100 hover:bg-indigo-700"
+              className="bg-[#153160] shadow-md shadow-[#153160]/20 hover:bg-[#153160]/90"
             >
               {saving ? (
                 <>
@@ -601,6 +660,7 @@ function MeetingDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

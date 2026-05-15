@@ -186,14 +186,14 @@ function MeetingsPage() {
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
-            <Button asChild variant="ghost" size="sm" className="group -ml-2 mb-2 text-slate-500 hover:bg-white hover:text-indigo-600">
+            <Button asChild variant="ghost" size="sm" className="group -ml-2 mb-2 text-slate-500 hover:bg-white hover:text-[#153160]">
               <Link to="/" className="flex items-center gap-2">
                 <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
                 Main Menu
               </Link>
             </Button>
             <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-slate-900">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-100">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#153160] text-white shadow-lg shadow-[#153160]/20">
                 <FileText className="h-6 w-6" />
               </div>
               Meeting Minutes
@@ -204,15 +204,15 @@ function MeetingsPage() {
           </div>
           <Button 
             onClick={() => setOpen(true)}
-            className="bg-indigo-600 shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:shadow-indigo-200"
+            className="bg-[#153160] shadow-lg shadow-[#153160]/20 hover:bg-[#153160]/90 hover:shadow-[#153160]/30"
           >
             <Plus className="mr-2 h-4 w-4" />
             Tambah Notulen
           </Button>
         </div>
 
-        <Card className="overflow-hidden border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-md">
-          <CardContent className="p-0">
+        <Card className="overflow-hidden border-border/60 shadow-sm">
+        <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader className="bg-slate-50/50">
@@ -229,7 +229,7 @@ function MeetingsPage() {
                     <TableRow>
                       <TableCell colSpan={5} className="py-20 text-center">
                         <div className="flex flex-col items-center gap-3">
-                          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                          <Loader2 className="h-8 w-8 animate-spin text-[#153160]" />
                           <p className="text-sm font-medium text-slate-400">Memuat data rapat...</p>
                         </div>
                       </TableCell>
@@ -263,11 +263,11 @@ function MeetingsPage() {
                             {formatDate(m.meeting_date)}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="border-indigo-100 bg-indigo-50/30 text-indigo-700">
+                            <Badge variant="outline" className="border-[#153160]/20 bg-[#153160]/5 text-[#153160]">
                               {m.division}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                          <TableCell className="font-semibold text-slate-900 group-hover:text-[#153160] transition-colors">
                             <Link 
                               to="/meetings/$id" 
                               params={{ id: String(m.id) }}
@@ -295,11 +295,10 @@ function MeetingsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto border-none p-0 shadow-2xl">
-          <DialogHeader className="bg-slate-50/80 px-6 py-4">
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
             <DialogTitle className="text-xl font-bold text-slate-900">Tambah Notulen Rapat</DialogTitle>
             <DialogDescription className="text-slate-500">
               Catat informasi rapat, peserta, dan daftar tugas (action items).
@@ -412,12 +411,12 @@ function MeetingsPage() {
                         key={id}
                         className={cn(
                           "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white",
-                          checked && "bg-white shadow-sm ring-1 ring-indigo-100"
+                          checked && "bg-white shadow-sm ring-1 ring-[#153160]/20"
                         )}
                       >
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          className="h-4 w-4 rounded border-slate-300 text-[#153160] focus:ring-[#153160]"
                           checked={checked}
                           onChange={() => toggleParticipant(id)}
                         />
@@ -441,7 +440,7 @@ function MeetingsPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="border-indigo-100 text-indigo-600 hover:bg-indigo-50"
+                  className="border-[#153160]/20 text-[#153160] hover:bg-[#153160]/5"
                   onClick={() => setResults((r) => [...r, emptyResult()])}
                 >
                   <Plus className="mr-1 h-3.5 w-3.5" /> Tambah Tugas
@@ -542,19 +541,18 @@ function MeetingsPage() {
             </div>
           </div>
 
-          <DialogFooter className="bg-slate-50/80 px-6 py-4">
+          <DialogFooter>
             <Button 
               variant="ghost" 
               onClick={() => setOpen(false)} 
               disabled={submitting}
-              className="text-slate-500 hover:bg-slate-200"
             >
               Batal
             </Button>
             <Button 
               onClick={handleSubmit} 
               disabled={submitting}
-              className="bg-indigo-600 shadow-md shadow-indigo-100 hover:bg-indigo-700"
+              className="bg-[#153160] shadow-md shadow-[#153160]/20 hover:bg-[#153160]/90"
             >
               {submitting ? (
                 <>
@@ -568,6 +566,7 @@ function MeetingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

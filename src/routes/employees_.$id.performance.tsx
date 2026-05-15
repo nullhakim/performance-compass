@@ -51,10 +51,13 @@ import {
 import { cn } from "@/lib/utils";
 import {
   api,
+  fetchTargets,
   formatRupiah,
   type Employee,
   type PerformanceResult,
   type TargetDetail,
+  type TargetRow,
+  type Product,
 } from "@/lib/api";
 
 // Re-using dialogs from targets.tsx logic or implementing simplified versions
@@ -88,6 +91,13 @@ function pctTone(pct: number) {
   return "text-amber-500";
 }
 
+function compactRp(n: number) {
+  if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `Rp ${(n / 1_000).toFixed(0)}k`;
+  return `Rp ${n}`;
+}
+
 function EmployeePerformancePage() {
   console.log("Rendering EmployeePerformancePage");
   const { id } = Route.useParams();
@@ -95,10 +105,17 @@ function EmployeePerformancePage() {
   
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [performance, setPerformance] = useState<PerformanceResult | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
   
   const [month, setMonth] = useState<string>(String(now.getMonth() + 1));
   const [year, setYear] = useState<string>(String(now.getFullYear()));
+  const [productId, setProductId] = useState<string>("all");
   const [loading, setLoading] = useState(false);
+
+  // Trend Chart State
+  const [trendType, setTrendType] = useState<"MoM" | "YoY">("MoM");
+  const [trendRows, setTrendRows] = useState<TargetRow[]>([]);
+  const [trendLoading, setTrendLoading] = useState(false);
 
   // Dialog states
   const [achRow, setAchRow] = useState<any | null>(null);
@@ -107,9 +124,15 @@ function EmployeePerformancePage() {
   const [deleteRow, setDeleteRow] = useState<any | null>(null);
 
   useEffect(() => {
-    api.getEmployee(id)
-      .then(setEmployee)
-      .catch((err: Error) => toast.error("Failed to load employee info", { description: err.message }));
+    Promise.all([
+      api.getEmployee(id),
+      api.getProducts()
+    ])
+      .then(([emp, prods]) => {
+        setEmployee(emp);
+        setProducts(prods || []);
+      })
+      .catch((err: Error) => toast.error("Failed to load data", { description: err.message }));
   }, [id]);
 
   const loadPerformance = async () => {
@@ -129,6 +152,39 @@ function EmployeePerformancePage() {
     loadPerformance();
   }, [id, month, year]);
 
+  useEffect(() => {
+    const fetchTrend = async () => {
+      setTrendLoading(true);
+      try {
+        if (trendType === "MoM") {
+          const res = await fetchTargets({
+            limit: 2000,
+            month: 0,
+            year: Number(year) || CURRENT_YEAR,
+            employee_id: id,
+            product_id: productId === "all" ? "" : productId,
+          });
+          setTrendRows(res.items);
+        } else {
+          const res = await fetchTargets({
+            limit: 5000,
+            month: 0,
+            year: 0,
+            employee_id: id,
+            product_id: productId === "all" ? "" : productId,
+          });
+          const last5 = res.items.filter((r) => r.year > CURRENT_YEAR - 5);
+          setTrendRows(last5);
+        }
+      } catch (err) {
+        console.error("Failed to fetch trend data", err);
+      } finally {
+        setTrendLoading(false);
+      }
+    };
+    fetchTrend();
+  }, [trendType, year, id, productId]);
+
   const handleDelete = async () => {
     if (!deleteRow) return;
     try {
@@ -141,17 +197,63 @@ function EmployeePerformancePage() {
     }
   };
 
-  const chartData = useMemo(() => {
+  const filteredTargets = useMemo(() => {
     if (!performance?.targets) return [];
-    return performance.targets.map(d => ({
+    if (productId === "all") return performance.targets;
+    return performance.targets.filter(d => String(d.product.id) === productId);
+  }, [performance, productId]);
+
+  const displayTotals = useMemo(() => {
+    if (!performance) return { target: 0, achievement: 0, percentage: 0 };
+    if (productId === "all") {
+      return {
+        target: performance.total_target,
+        achievement: performance.total_achievement,
+        percentage: performance.percentage,
+      };
+    }
+    const target = filteredTargets.reduce((sum, t) => sum + t.nominal, 0);
+    const achievement = filteredTargets.reduce((sum, t) => sum + t.total_achievement, 0);
+    const percentage = target > 0 ? (achievement / target) * 100 : 0;
+    return { target, achievement, percentage };
+  }, [filteredTargets, performance, productId]);
+
+  const chartData = useMemo(() => {
+    return filteredTargets.map(d => ({
       name: d.product.name,
       Target: d.nominal,
       Achievement: d.total_achievement,
     }));
-  }, [performance]);
+  }, [filteredTargets]);
+
+  const trendChartData = useMemo(() => {
+    if (trendType === "MoM") {
+      const monthsData = Array.from({ length: 12 }, (_, i) => ({
+        name: MONTHS[i].substring(0, 3),
+        Target: 0,
+        Achievement: 0,
+      }));
+      trendRows.forEach((r) => {
+        if (r.month >= 1 && r.month <= 12) {
+          monthsData[r.month - 1].Target += r.nominal || 0;
+          monthsData[r.month - 1].Achievement += r.total_achievement || 0;
+        }
+      });
+      return monthsData;
+    } else {
+      const yearsMap = new Map<number, { name: string; Target: number; Achievement: number }>();
+      trendRows.forEach((r) => {
+        const existing = yearsMap.get(r.year) || { name: String(r.year), Target: 0, Achievement: 0 };
+        existing.Target += r.nominal || 0;
+        existing.Achievement += r.total_achievement || 0;
+        yearsMap.set(r.year, existing);
+      });
+      return Array.from(yearsMap.values()).sort((a, b) => Number(a.name) - Number(b.name));
+    }
+  }, [trendRows, trendType]);
 
   const generatePDF = () => {
-    if (!performance || !performance.targets || performance.targets.length === 0) {
+    if (filteredTargets.length === 0) {
       toast.error("No data to export");
       return;
     }
@@ -260,13 +362,13 @@ function EmployeePerformancePage() {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(...INK);
-    doc.text(formatRupiah(performance.total_target), rx, sumLabelY + 5);
-    doc.text(formatRupiah(performance.total_achievement), rx + 48, sumLabelY + 5);
+    doc.text(formatRupiah(displayTotals.target), rx, sumLabelY + 5);
+    doc.text(formatRupiah(displayTotals.achievement), rx + 48, sumLabelY + 5);
 
     const pctColor: [number, number, number] =
-      performance.percentage >= 100 ? [16, 122, 84] : performance.percentage < 50 ? [185, 28, 28] : [180, 130, 30];
+      displayTotals.percentage >= 100 ? [16, 122, 84] : displayTotals.percentage < 50 ? [185, 28, 28] : [180, 130, 30];
     doc.setTextColor(...pctColor);
-    doc.text(`${performance.percentage.toFixed(1)}%`, rx + 100, sumLabelY + 5);
+    doc.text(`${displayTotals.percentage.toFixed(1)}%`, rx + 100, sumLabelY + 5);
 
     y += 32;
 
@@ -274,7 +376,7 @@ function EmployeePerformancePage() {
     autoTable(doc, {
       startY: y + 6,
       head: [["Product", "Target Nominal", "Total Achievement", "Progress"]],
-      body: performance.targets.map((d) => {
+      body: filteredTargets.map((d) => {
         const pct = d.nominal > 0 ? (d.total_achievement / d.nominal) * 100 : 0;
         return [
           d.product.name,
@@ -362,7 +464,7 @@ function EmployeePerformancePage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
               <Label>Month</Label>
               <Select value={month} onValueChange={setMonth}>
@@ -387,6 +489,18 @@ function EmployeePerformancePage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Product</Label>
+              <Select value={productId} onValueChange={setProductId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Products</SelectItem>
+                  {products.map((p) => (
+                    <SelectItem key={String(p.id)} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -398,7 +512,7 @@ function EmployeePerformancePage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">Total Target</p>
-                <p className="text-xl font-bold text-slate-900">{formatRupiah(performance.total_target)}</p>
+                <p className="text-xl font-bold text-slate-900">{formatRupiah(displayTotals.target)}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
                 <TargetIcon className="h-5 w-5" />
@@ -409,7 +523,7 @@ function EmployeePerformancePage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Total Achieved</p>
-                <p className="text-xl font-bold text-slate-900">{formatRupiah(performance.total_achievement)}</p>
+                <p className="text-xl font-bold text-slate-900">{formatRupiah(displayTotals.achievement)}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
                 <TrendingUp className="h-5 w-5" />
@@ -420,13 +534,13 @@ function EmployeePerformancePage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Overall Progress</p>
-                <p className={cn("text-xl font-bold", pctTone(performance.percentage))}>
-                  {performance.percentage.toFixed(1)}%
+                <p className={cn("text-xl font-bold", pctTone(displayTotals.percentage))}>
+                  {displayTotals.percentage.toFixed(1)}%
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-16">
-                  <Progress value={Math.min(100, performance.percentage)} className="h-1.5" />
+                  <Progress value={Math.min(100, displayTotals.percentage)} className="h-1.5" />
                 </div>
               </div>
             </CardContent>
@@ -434,57 +548,95 @@ function EmployeePerformancePage() {
         </div>
       )}
 
-      {/* 3. CHART SECTION */}
-      {chartData.length > 0 && !loading && (
-        <Card className="mb-6 border-border/60 shadow-sm animate-in fade-in slide-in-from-top-4 duration-700">
+      {/* 3. CHARTS SECTION */}
+      <div className="mb-6 grid gap-6 lg:grid-cols-2 animate-in fade-in slide-in-from-top-4 duration-700">
+        {/* Product Comparison Chart */}
+        <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Performance by Product</CardTitle>
-            <p className="text-xs text-muted-foreground">Breakdown of targets vs achievements for the selected period.</p>
+            <CardTitle className="text-base font-semibold">Target vs Achievement by Product</CardTitle>
+            <p className="text-xs text-muted-foreground">Snapshot for current selection.</p>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] w-full pt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 11, fill: "#64748b" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: "#64748b" }}
-                    tickFormatter={(v) => `Rp${v / 1000000}M`}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    formatter={(v: number) => formatRupiah(v)}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                  />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="Target" 
-                    stroke="#6366f1" 
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }}
-                    activeDot={{ r: 6 }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="Achievement" 
-                    stroke="#10b981" 
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            {chartData.length === 0 && !loading ? (
+              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">No data for the selected period.</div>
+            ) : (
+              <div className="h-[300px] w-full pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11, fill: "#64748b" }}
+                      axisLine={false}
+                      tickLine={false}
+                      angle={-30}
+                      textAnchor="end"
+                      interval={0}
+                      height={60}
+                    />
+                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={compactRp} axisLine={false} tickLine={false} width={80} />
+                    <Tooltip formatter={(v: number) => formatRupiah(v)} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 20px rgba(0,0,0,0.08)", fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 20 }} />
+                    <Line type="monotone" dataKey="Target" stroke="#1e3a5f" strokeWidth={3} dot={{ r: 4, fill: "#1e3a5f", strokeWidth: 2, stroke: "#fff" }} />
+                    <Line type="monotone" dataKey="Achievement" stroke="#c9a84c" strokeWidth={3} dot={{ r: 4, fill: "#c9a84c", strokeWidth: 2, stroke: "#fff" }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+
+        {/* Growth Trend Chart (MoM/YoY) */}
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-base font-semibold">Performance Trend</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {trendType === "MoM" ? `Monthly for ${year === "0" ? "All-Time" : year}` : "Year-over-Year (Last 5 years)"}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 rounded-md border border-border p-1">
+              <Button
+                variant={trendType === "MoM" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 px-2.5 text-[11px]"
+                onClick={() => setTrendType("MoM")}
+              >
+                MoM
+              </Button>
+              <Button
+                variant={trendType === "YoY" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 px-2.5 text-[11px]"
+                onClick={() => setTrendType("YoY")}
+              >
+                YoY
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {trendLoading ? (
+              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>
+            ) : trendChartData.length === 0 ? (
+              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">No historical data.</div>
+            ) : (
+              <div className="h-[300px] w-full pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendChartData} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={compactRp} axisLine={false} tickLine={false} width={80} />
+                    <Tooltip formatter={(v: number) => formatRupiah(v)} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 20px rgba(0,0,0,0.08)", fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 20 }} />
+                    <Line type="monotone" dataKey="Target" stroke="#1e3a5f" strokeWidth={2} dot={{ r: 3, fill: "#1e3a5f" }} />
+                    <Line type="monotone" dataKey="Achievement" stroke="#c9a84c" strokeWidth={2} dot={{ r: 3, fill: "#c9a84c" }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* 4. TABLE SECTION */}
       <Card className="border-border/60 shadow-sm">
@@ -496,7 +648,7 @@ function EmployeePerformancePage() {
             <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...
             </div>
-          ) : !performance || !performance.targets || performance.targets.length === 0 ? (
+          ) : filteredTargets.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
               No performance data found for this period.
             </div>
@@ -512,7 +664,7 @@ function EmployeePerformancePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {performance.targets.map((d, idx) => {
+                {filteredTargets.map((d, idx) => {
                   const pct = d.nominal > 0 ? (d.total_achievement / d.nominal) * 100 : 0;
                   // Construct a row object that matches what the dialogs expect
                   const row = {
