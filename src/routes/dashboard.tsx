@@ -184,8 +184,8 @@ function DashboardPage() {
                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={compactRp} width={80} />
                 <Tooltip formatter={(v: number) => formatRupiah(v)} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 20px rgba(0,0,0,0.08)", fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Target" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Achievement" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Target" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Achievement" fill="#c9a84c" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
