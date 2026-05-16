@@ -351,7 +351,7 @@ function MeetingDetailPage() {
   }
 
   return (
-    <DashboardLayout title="Meeting Details" subtitle={meeting.title} hideMobileNav>
+    <DashboardLayout title="Meeting Details" subtitle={meeting.title} hideMobileNav hideSidebar>
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="overflow-hidden border-border/60 shadow-sm lg:col-span-3">
           <CardHeader className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">

@@ -184,7 +184,7 @@ function MeetingsPage() {
   };
 
   return (
-    <DashboardLayout title="Meeting Minutes" subtitle="List of meeting minutes and action items." hideMobileNav>
+    <DashboardLayout title="Meeting Minutes" subtitle="List of meeting minutes and action items." hideMobileNav hideSidebar>
       <div className="mb-8 flex items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-slate-900 md:text-2xl">

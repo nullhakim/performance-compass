@@ -10,17 +10,19 @@ export function DashboardLayout({
   children, 
   title, 
   subtitle,
-  hideMobileNav = false 
+  hideMobileNav = false,
+  hideSidebar = false
 }: { 
   children: ReactNode; 
   title: string; 
   subtitle?: string;
   hideMobileNav?: boolean;
+  hideSidebar?: boolean;
 }) {
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar />
-      <div className="md:pl-64">
+      {!hideSidebar && <AppSidebar />}
+      <div className={cn(!hideSidebar && "md:pl-64")}>
         <header className="sticky top-0 z-20 border-b border-border/70 bg-background/85 backdrop-blur">
           <div className="flex h-14 items-center gap-3 px-4 md:px-8 lg:px-10">
             <Button
