@@ -82,6 +82,8 @@ const emptyResult = (): ResultDraft => ({
   target_completion_date: undefined,
 });
 
+import { DashboardLayout } from "@/components/dashboard-layout";
+
 function MeetingsPage() {
   const navigate = useNavigate();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -182,119 +184,96 @@ function MeetingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-50/50 via-slate-50 to-white pb-20">
-      <div className="mx-auto max-w-7xl px-6 py-10">
-        <div className="mb-8 flex items-center justify-between gap-4">
-          <div>
-            <Button asChild variant="ghost" size="sm" className="group -ml-2 mb-2 text-slate-500 hover:bg-white hover:text-[#153160]">
-              <Link to="/" className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-                Main Menu
-              </Link>
-            </Button>
-            <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-slate-900">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#153160] text-white shadow-lg shadow-[#153160]/20">
-                <FileText className="h-6 w-6" />
-              </div>
-              Meeting Minutes
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Daftar notulen rapat terbaru dan pengelolaan action items.
-            </p>
-          </div>
-          <Button 
-            onClick={() => setOpen(true)}
-            className="bg-[#153160] shadow-lg shadow-[#153160]/20 hover:bg-[#153160]/90 hover:shadow-[#153160]/30"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Notulen
-          </Button>
+    <DashboardLayout title="Meeting Minutes" subtitle="List of meeting minutes and action items." hideMobileNav>
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 md:text-2xl">
+            Recent Meetings
+          </h2>
+          <p className="text-sm text-slate-500">
+            Daftar notulen rapat terbaru.
+          </p>
         </div>
+        <Button 
+          onClick={() => setOpen(true)}
+          className="bg-[#153160] shadow-lg shadow-[#153160]/20 hover:bg-[#153160]/90"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          <span className="hidden sm:inline">Tambah Notulen</span>
+          <span className="sm:hidden">Tambah</span>
+        </Button>
+      </div>
 
-        <Card className="overflow-hidden border-border/60 shadow-sm">
+      <Card className="overflow-hidden border-border/60 shadow-sm">
         <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-slate-50/50">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50/50">
+                <TableRow>
+                  <TableHead className="w-[150px] font-semibold text-slate-700">Tanggal</TableHead>
+                  <TableHead className="w-[120px] font-semibold text-slate-700">Divisi</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Judul Rapat</TableHead>
+                  <TableHead className="w-[100px] text-right font-semibold text-slate-700">Peserta</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
                   <TableRow>
-                    <TableHead className="w-[180px] font-semibold text-slate-700">Tanggal</TableHead>
-                    <TableHead className="w-[150px] font-semibold text-slate-700">Divisi</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Judul Rapat</TableHead>
-                    <TableHead className="w-[120px] font-semibold text-slate-700">Tipe</TableHead>
-                    <TableHead className="w-[100px] text-right font-semibold text-slate-700">Peserta</TableHead>
+                    <TableCell colSpan={4} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="h-8 w-8 animate-spin text-[#153160]" />
+                        <p className="text-sm font-medium text-slate-400">Memuat data rapat...</p>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="py-20 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <Loader2 className="h-8 w-8 animate-spin text-[#153160]" />
-                          <p className="text-sm font-medium text-slate-400">Memuat data rapat...</p>
+                ) : meetings.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="rounded-full bg-slate-100 p-4">
+                          <FileText className="h-8 w-8 text-slate-300" />
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : meetings.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="py-20 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="rounded-full bg-slate-100 p-4">
-                            <FileText className="h-8 w-8 text-slate-300" />
+                        <p className="text-sm font-medium text-slate-500">Belum ada notulen rapat.</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  meetings.map((m) => {
+                    const count = m.participants?.length ?? m.participant_ids?.length ?? 0;
+                    return (
+                      <TableRow
+                        key={String(m.id)}
+                        className="group cursor-pointer transition-colors hover:bg-slate-50/80"
+                        onClick={() =>
+                          navigate({ to: "/meetings/$id", params: { id: String(m.id) } })
+                        }
+                      >
+                        <TableCell className="whitespace-nowrap font-medium text-slate-500">
+                          {formatDate(m.meeting_date)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="border-[#153160]/20 bg-[#153160]/5 text-[#153160]">
+                            {m.division}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-semibold text-slate-900 group-hover:text-[#153160] transition-colors">
+                          {m.title}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1.5 text-slate-500">
+                            <Users className="h-3.5 w-3.5" />
+                            <span className="text-sm font-medium tabular-nums">{count}</span>
                           </div>
-                          <p className="text-sm font-medium text-slate-500">Belum ada notulen rapat.</p>
-                          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-                            Buat Notulen Pertama
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    meetings.map((m) => {
-                      const count = m.participants?.length ?? m.participant_ids?.length ?? 0;
-                      return (
-                        <TableRow
-                          key={String(m.id)}
-                          className="group cursor-pointer transition-colors hover:bg-slate-50/80"
-                          onClick={() =>
-                            navigate({ to: "/meetings/$id", params: { id: String(m.id) } })
-                          }
-                        >
-                          <TableCell className="whitespace-nowrap font-medium text-slate-500">
-                            {formatDate(m.meeting_date)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="border-[#153160]/20 bg-[#153160]/5 text-[#153160]">
-                              {m.division}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-semibold text-slate-900 group-hover:text-[#153160] transition-colors">
-                            <Link 
-                              to="/meetings/$id" 
-                              params={{ id: String(m.id) }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="hover:underline"
-                            >
-                              {m.title}
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-xs font-medium text-slate-600">{m.meeting_type}</span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1.5 text-slate-500">
-                              <Users className="h-3.5 w-3.5" />
-                              <span className="text-sm font-medium tabular-nums">{count}</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
@@ -305,7 +284,7 @@ function MeetingsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-6 px-6 py-6">
+          <div className="grid gap-6 px-4 py-4 md:px-6 md:py-6">
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Divisi *</Label>
@@ -427,9 +406,6 @@ function MeetingsPage() {
                     );
                   })}
                 </div>
-                {employees.length === 0 && (
-                  <p className="py-4 text-center text-xs text-slate-400">Tidak ada data karyawan.</p>
-                )}
               </div>
             </div>
 
@@ -566,7 +542,6 @@ function MeetingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

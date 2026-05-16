@@ -59,6 +59,7 @@ import {
   type TargetRow,
   type Product,
 } from "@/lib/api";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Re-using dialogs from targets.tsx logic or implementing simplified versions
 import { RecordAchievementDialog, HistoryDialog, EditNominalDialog } from "@/components/target-dialogs";
@@ -111,6 +112,7 @@ function EmployeePerformancePage() {
   const [year, setYear] = useState<string>(String(now.getFullYear()));
   const [productId, setProductId] = useState<string>("all");
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   // Trend Chart State
   const [trendType, setTrendType] = useState<"MoM" | "YoY">("MoM");
@@ -446,9 +448,9 @@ function EmployeePerformancePage() {
       subtitle="Detailed target and achievement breakdown for a specific employee."
     >
       <div className="mb-6 flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
+        <Button variant="outline" size="sm" asChild className="h-8">
           <Link to="/employees">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Employees
+            <ArrowLeft className="mr-2 h-4 w-4" /> <span className="hidden md:inline">Back to Employees</span><span className="md:hidden">Back</span>
           </Link>
         </Button>
       </div>
@@ -458,8 +460,8 @@ function EmployeePerformancePage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base font-semibold">Period Selection</CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={generatePDF} className="h-8 gap-2">
-              <FileDown className="h-3.5 w-3.5" /> Export PDF
+            <Button variant="outline" size="sm" onClick={generatePDF} className="h-8 gap-2 px-2 md:px-3">
+              <FileDown className="h-3.5 w-3.5" /> <span className="hidden md:inline">Export PDF</span>
             </Button>
           </div>
         </CardHeader>
@@ -560,25 +562,25 @@ function EmployeePerformancePage() {
             {chartData.length === 0 && !loading ? (
               <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">No data for the selected period.</div>
             ) : (
-              <div className="h-[300px] w-full pt-4">
+              <div className="h-[260px] md:h-[300px] w-full pt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 40 }}>
+                  <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: isMobile ? 30 : 40 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis
                       dataKey="name"
-                      tick={{ fontSize: 11, fill: "#64748b" }}
+                      tick={{ fontSize: isMobile ? 9 : 11, fill: "#64748b" }}
                       axisLine={false}
                       tickLine={false}
-                      angle={-30}
+                      angle={isMobile ? -45 : -30}
                       textAnchor="end"
                       interval={0}
-                      height={60}
+                      height={isMobile ? 50 : 60}
                     />
-                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={compactRp} axisLine={false} tickLine={false} width={80} />
+                    <YAxis tick={{ fontSize: isMobile ? 9 : 11, fill: "#64748b" }} tickFormatter={compactRp} axisLine={false} tickLine={false} width={isMobile ? 60 : 80} />
                     <Tooltip formatter={(v: number) => formatRupiah(v)} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 20px rgba(0,0,0,0.08)", fontSize: 12 }} />
-                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 20 }} />
-                    <Line type="monotone" dataKey="Target" stroke="#1e3a5f" strokeWidth={3} dot={{ r: 4, fill: "#1e3a5f", strokeWidth: 2, stroke: "#fff" }} />
-                    <Line type="monotone" dataKey="Achievement" stroke="#c9a84c" strokeWidth={3} dot={{ r: 4, fill: "#c9a84c", strokeWidth: 2, stroke: "#fff" }} />
+                    <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12, paddingTop: isMobile ? 10 : 20 }} />
+                    <Line type="monotone" dataKey="Target" stroke="#1e3a5f" strokeWidth={isMobile ? 2 : 3} dot={{ r: 4, fill: "#1e3a5f", strokeWidth: 2, stroke: "#fff" }} />
+                    <Line type="monotone" dataKey="Achievement" stroke="#c9a84c" strokeWidth={isMobile ? 2 : 3} dot={{ r: 4, fill: "#c9a84c", strokeWidth: 2, stroke: "#fff" }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -620,14 +622,14 @@ function EmployeePerformancePage() {
             ) : trendChartData.length === 0 ? (
               <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">No historical data.</div>
             ) : (
-              <div className="h-[300px] w-full pt-4">
+              <div className="h-[260px] md:h-[300px] w-full pt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendChartData} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                  <LineChart data={trendChartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={compactRp} axisLine={false} tickLine={false} width={80} />
+                    <XAxis dataKey="name" tick={{ fontSize: isMobile ? 9 : 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: isMobile ? 9 : 11, fill: "#64748b" }} tickFormatter={compactRp} axisLine={false} tickLine={false} width={isMobile ? 60 : 80} />
                     <Tooltip formatter={(v: number) => formatRupiah(v)} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 20px rgba(0,0,0,0.08)", fontSize: 12 }} />
-                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 20 }} />
+                    <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12, paddingTop: isMobile ? 10 : 20 }} />
                     <Line type="monotone" dataKey="Target" stroke="#1e3a5f" strokeWidth={2} dot={{ r: 3, fill: "#1e3a5f" }} />
                     <Line type="monotone" dataKey="Achievement" stroke="#c9a84c" strokeWidth={2} dot={{ r: 3, fill: "#c9a84c" }} />
                   </LineChart>

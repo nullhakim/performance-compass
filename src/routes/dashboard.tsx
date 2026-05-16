@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { api, fetchTargets, formatRupiah, type Product, type TargetRow } from "@/lib/api";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -65,6 +66,7 @@ function DashboardPage() {
   const [leaderProductId, setLeaderProductId] = useState<string>("all");
   const [targets, setTargets] = useState<TargetRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     api.getProducts().then((p) => setProducts(p || [])).catch(() => {});
@@ -155,13 +157,13 @@ function DashboardPage() {
 
       {/* KPI cards */}
       <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <KpiCard label="Total Company Target" value={formatRupiah(stats.totalTarget)} icon={<TargetIcon className="h-5 w-5" />} tone="indigo" />
+        <KpiCard label="Total Target" value={formatRupiah(stats.totalTarget)} icon={<TargetIcon className="h-5 w-5" />} tone="indigo" />
         <KpiCard label="Total Achieved" value={formatRupiah(stats.totalAchievement)} icon={<TrendingUp className="h-5 w-5" />} tone="emerald" />
         <Card className="border-border/60 shadow-sm">
-          <CardContent className="p-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Overall Progress</p>
-            <p className={`mt-3 text-2xl font-bold tabular-nums ${pctTone}`}>{stats.percentage.toFixed(1)}%</p>
-            <Progress value={Math.min(100, stats.percentage)} className="mt-3 h-2" />
+          <CardContent className="p-4 md:p-6">
+            <p className="text-[10px] md:text-xs font-medium uppercase tracking-wider text-muted-foreground">Overall Progress</p>
+            <p className={`mt-2 md:mt-3 text-xl md:text-2xl font-bold tabular-nums ${pctTone}`}>{stats.percentage.toFixed(1)}%</p>
+            <Progress value={Math.min(100, stats.percentage)} className="mt-2 md:mt-3 h-1.5 md:h-2" />
           </CardContent>
         </Card>
       </div>
@@ -173,17 +175,28 @@ function DashboardPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex h-[360px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            <div className="flex h-[300px] md:h-[360px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
           ) : stats.productStats.length === 0 ? (
-            <div className="flex h-[360px] items-center justify-center text-sm text-muted-foreground">No data for the selected period.</div>
+            <div className="flex h-[300px] md:h-[360px] items-center justify-center text-sm text-muted-foreground">No data for the selected period.</div>
           ) : (
-            <ResponsiveContainer width="100%" height={360}>
-              <BarChart data={stats.productStats} margin={{ top: 10, right: 20, left: 20, bottom: 60 }}>
+            <ResponsiveContainer width="100%" height={isMobile ? 320 : 360}>
+              <BarChart data={stats.productStats} margin={{ top: 10, right: 10, left: 0, bottom: isMobile ? 40 : 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} angle={-30} textAnchor="end" interval={0} height={70} />
-                <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={compactRp} width={80} />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: isMobile ? 9 : 11, fill: "#64748b" }} 
+                  angle={isMobile ? -45 : -30} 
+                  textAnchor="end" 
+                  interval={0} 
+                  height={isMobile ? 60 : 70} 
+                />
+                <YAxis 
+                  tick={{ fontSize: isMobile ? 9 : 11, fill: "#64748b" }} 
+                  tickFormatter={compactRp} 
+                  width={isMobile ? 60 : 80} 
+                />
                 <Tooltip formatter={(v: number) => formatRupiah(v)} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 20px rgba(0,0,0,0.08)", fontSize: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12, paddingTop: isMobile ? 10 : 0 }} />
                 <Bar dataKey="Target" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Achievement" fill="#c9a84c" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -200,9 +213,9 @@ function DashboardPage() {
             <CardTitle className="text-base font-semibold">Leaderboards</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground">Filter by product</Label>
+            <Label className="hidden md:block text-xs text-muted-foreground">Filter by product</Label>
             <Select value={leaderProductId} onValueChange={setLeaderProductId}>
-              <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full md:w-[220px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Products</SelectItem>
                 {products.map((p) => <SelectItem key={String(p.id)} value={String(p.id)}>{p.name}</SelectItem>)}
@@ -269,12 +282,12 @@ function KpiCard({ label, value, icon, tone }: { label: string; value: string; i
   const tones = { indigo: "bg-indigo-50 text-indigo-600", emerald: "bg-emerald-50 text-emerald-600" };
   return (
     <Card className="border-border/60 shadow-sm">
-      <CardContent className="p-6">
+      <CardContent className="p-4 md:p-6">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-          <div className={`flex h-9 w-9 items-center justify-center rounded-md ${tones[tone]}`}>{icon}</div>
+          <p className="text-[10px] md:text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+          <div className={`flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-md ${tones[tone]}`}>{icon}</div>
         </div>
-        <p className="mt-3 text-2xl font-bold tabular-nums">{value}</p>
+        <p className="mt-2 md:mt-3 text-xl md:text-2xl font-bold tabular-nums">{value}</p>
       </CardContent>
     </Card>
   );

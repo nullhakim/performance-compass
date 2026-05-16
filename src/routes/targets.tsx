@@ -80,6 +80,7 @@ import {
   type Product,
   type TargetRow,
 } from "@/lib/api";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { RecordAchievementDialog, HistoryDialog, EditNominalDialog } from "@/components/target-dialogs";
 
 export const Route = createFileRoute("/targets")({
@@ -116,6 +117,7 @@ function TargetsPage() {
   const [year, setYear] = useState<string>(String(now.getFullYear()));
   const [productId, setProductId] = useState<string>("all");
   const [page, setPage] = useState(1);
+  const isMobile = useIsMobile();
   const limit = 10;
 
   const [rows, setRows] = useState<TargetRow[]>([]);
@@ -495,8 +497,8 @@ function TargetsPage() {
                 </Select>
               </div>
             </div>
-            <Button onClick={() => setCreateOpen(true)} className="md:w-auto">
-              <Plus className="mr-1.5 h-4 w-4" /> Assign New Target
+            <Button onClick={() => setCreateOpen(true)} className="w-full md:w-auto">
+              <Plus className="mr-1.5 h-4 w-4" /> {isMobile ? "Assign" : "Assign New Target"}
             </Button>
           </div>
         </CardContent>
@@ -505,13 +507,13 @@ function TargetsPage() {
       {/* 2. SUMMARY WIDGETS */}
       {rows.length > 0 && !loading && (
         <div className="mb-6 grid gap-4 md:grid-cols-3">
-          <KpiCard label="Page Total Target" value={formatRupiah(pageTotalTarget)} icon={<TargetIcon className="h-5 w-5" />} tone="indigo" />
-          <KpiCard label="Page Total Achieved" value={formatRupiah(pageTotalAch)} icon={<TrendingUp className="h-5 w-5" />} tone="emerald" />
+          <KpiCard label="Total Target" value={formatRupiah(pageTotalTarget)} icon={<TargetIcon className="h-5 w-5" />} tone="indigo" />
+          <KpiCard label="Total Achieved" value={formatRupiah(pageTotalAch)} icon={<TrendingUp className="h-5 w-5" />} tone="emerald" />
           <Card className="border-border/60 shadow-sm">
-            <CardContent className="p-6">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Overall Progress</p>
-              <p className={`mt-3 text-2xl font-bold tabular-nums ${pctTone(pagePercentage)}`}>{pagePercentage.toFixed(1)}%</p>
-              <Progress value={Math.min(100, pagePercentage)} className="mt-3 h-2" />
+            <CardContent className="p-4 md:p-6">
+              <p className="text-[10px] md:text-xs font-medium uppercase tracking-wider text-muted-foreground">Overall Progress</p>
+              <p className={`mt-2 md:mt-3 text-xl md:text-2xl font-bold tabular-nums ${pctTone(pagePercentage)}`}>{pagePercentage.toFixed(1)}%</p>
+              <Progress value={Math.min(100, pagePercentage)} className="mt-2 md:mt-3 h-1.5 md:h-2" />
             </CardContent>
           </Card>
         </div>
@@ -529,25 +531,25 @@ function TargetsPage() {
             {chartData.length === 0 && !loading ? (
               <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">No data for the selected period.</div>
             ) : (
-              <div className="h-[300px] w-full pt-4">
+              <div className="h-[260px] md:h-[300px] w-full pt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 40 }}>
+                  <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: isMobile ? 30 : 40 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis
                       dataKey="name"
-                      tick={{ fontSize: 11, fill: "#64748b" }}
+                      tick={{ fontSize: isMobile ? 9 : 11, fill: "#64748b" }}
                       axisLine={false}
                       tickLine={false}
-                      angle={-30}
+                      angle={isMobile ? -45 : -30}
                       textAnchor="end"
                       interval={0}
-                      height={60}
+                      height={isMobile ? 50 : 60}
                     />
-                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={compactRp} axisLine={false} tickLine={false} width={80} />
+                    <YAxis tick={{ fontSize: isMobile ? 9 : 11, fill: "#64748b" }} tickFormatter={compactRp} axisLine={false} tickLine={false} width={isMobile ? 60 : 80} />
                     <Tooltip formatter={(v: number) => formatRupiah(v)} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 20px rgba(0,0,0,0.08)", fontSize: 12 }} />
-                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 20 }} />
-                    <Line type="monotone" dataKey="Target" stroke="#1e3a5f" strokeWidth={3} dot={{ r: 4, fill: "#1e3a5f", strokeWidth: 2, stroke: "#fff" }} />
-                    <Line type="monotone" dataKey="Achievement" stroke="#c9a84c" strokeWidth={3} dot={{ r: 4, fill: "#c9a84c", strokeWidth: 2, stroke: "#fff" }} />
+                    <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12, paddingTop: isMobile ? 10 : 20 }} />
+                    <Line type="monotone" dataKey="Target" stroke="#1e3a5f" strokeWidth={isMobile ? 2 : 3} dot={{ r: 4, fill: "#1e3a5f", strokeWidth: 2, stroke: "#fff" }} />
+                    <Line type="monotone" dataKey="Achievement" stroke="#c9a84c" strokeWidth={isMobile ? 2 : 3} dot={{ r: 4, fill: "#c9a84c", strokeWidth: 2, stroke: "#fff" }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -589,14 +591,14 @@ function TargetsPage() {
             ) : trendChartData.length === 0 ? (
               <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">No historical data.</div>
             ) : (
-              <div className="h-[300px] w-full pt-4">
+              <div className="h-[260px] md:h-[300px] w-full pt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendChartData} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                  <LineChart data={trendChartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={compactRp} axisLine={false} tickLine={false} width={80} />
+                    <XAxis dataKey="name" tick={{ fontSize: isMobile ? 9 : 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: isMobile ? 9 : 11, fill: "#64748b" }} tickFormatter={compactRp} axisLine={false} tickLine={false} width={isMobile ? 60 : 80} />
                     <Tooltip formatter={(v: number) => formatRupiah(v)} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 20px rgba(0,0,0,0.08)", fontSize: 12 }} />
-                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 20 }} />
+                    <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12, paddingTop: isMobile ? 10 : 20 }} />
                     <Line type="monotone" dataKey="Target" stroke="#1e3a5f" strokeWidth={2} dot={{ r: 3, fill: "#1e3a5f" }} />
                     <Line type="monotone" dataKey="Achievement" stroke="#c9a84c" strokeWidth={2} dot={{ r: 3, fill: "#c9a84c" }} />
                   </LineChart>
@@ -612,10 +614,10 @@ function TargetsPage() {
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
             <CardTitle className="text-base font-semibold">Targets List</CardTitle>
-            <p className="text-xs text-muted-foreground">{total} record{total !== 1 ? "s" : ""} overall</p>
+            <p className="text-xs text-muted-foreground">{total} record{total !== 1 ? "s" : ""} {isMobile ? "" : "overall"}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={generatePDF} className="h-8 gap-2">
-            <FileDown className="h-3.5 w-3.5" /> Export PDF
+          <Button variant="outline" size="sm" onClick={generatePDF} className="h-8 gap-2 px-2 md:px-3">
+            <FileDown className="h-3.5 w-3.5" /> <span className="hidden md:inline">Export PDF</span>
           </Button>
         </CardHeader>
         <CardContent>
@@ -765,12 +767,12 @@ function KpiCard({ label, value, icon, tone }: { label: string; value: string; i
   const tones = { indigo: "bg-indigo-50 text-indigo-600", emerald: "bg-emerald-50 text-emerald-600" };
   return (
     <Card className="border-border/60 shadow-sm">
-      <CardContent className="p-6">
+      <CardContent className="p-4 md:p-6">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-          <div className={`flex h-9 w-9 items-center justify-center rounded-md ${tones[tone]}`}>{icon}</div>
+          <p className="text-[10px] md:text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+          <div className={`flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-md ${tones[tone]}`}>{icon}</div>
         </div>
-        <p className="mt-3 text-2xl font-bold tabular-nums">{value}</p>
+        <p className="mt-2 md:mt-3 text-xl md:text-2xl font-bold tabular-nums">{value}</p>
       </CardContent>
     </Card>
   );

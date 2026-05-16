@@ -54,6 +54,8 @@ function statusTone(status?: string) {
   return "bg-muted text-muted-foreground border-border";
 }
 
+import { DashboardLayout } from "@/components/dashboard-layout";
+
 function MeetingDetailPage() {
   const { id } = Route.useParams();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
@@ -131,9 +133,6 @@ function MeetingDetailPage() {
     try {
       await api.patchResultStatus(resultId, newStatus);
       toast.success("Status tugas berhasil diperbarui");
-      // Update local state to reflect change without full reload if possible, 
-      // but requirements say "re-fetch (GET Detail) agar UI terupdate" for PUT, 
-      // for status it says "Tampilkan Toast Success". I'll re-fetch to be safe and consistent.
       load();
     } catch (e) {
       toast.error((e as Error).message || "Gagal memperbarui status");
@@ -328,340 +327,304 @@ function MeetingDetailPage() {
 
   if (loading && !meeting) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative flex h-12 w-12 items-center justify-center">
-            <div className="absolute inset-0 animate-ping rounded-full bg-[#153160] opacity-20"></div>
-            <Loader2 className="h-8 w-8 animate-spin text-[#153160]" />
-          </div>
-          <p className="animate-pulse text-sm font-medium text-slate-500">Memuat detail rapat...</p>
-        </div>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#153160]" />
       </div>
     );
   }
 
   if (!meeting) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
-        <Card className="w-full max-w-md border-slate-200/60 shadow-xl shadow-slate-200/40">
-          <CardContent className="flex flex-col items-center py-12 text-center">
-            <div className="mb-4 rounded-full bg-slate-100 p-3">
-              <CalendarIcon className="h-6 w-6 text-slate-400" />
-            </div>
-            <CardTitle className="mb-2">Rapat Tidak Ditemukan</CardTitle>
-            <p className="mb-6 text-sm text-muted-foreground">
-              Maaf, kami tidak dapat menemukan data rapat yang Anda cari.
-            </p>
-            <Button asChild variant="outline">
-              <Link to="/meetings">Kembali ke Daftar</Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex flex-col items-center py-12 text-center">
+        <div className="mb-4 rounded-full bg-slate-100 p-3">
+          <CalendarIcon className="h-6 w-6 text-slate-400" />
+        </div>
+        <h3 className="mb-2 text-lg font-bold">Rapat Tidak Ditemukan</h3>
+        <p className="mb-6 text-sm text-muted-foreground">
+          Maaf, kami tidak dapat menemukan data rapat yang Anda cari.
+        </p>
+        <Button asChild variant="outline">
+          <Link to="/meetings">Kembali ke Daftar</Link>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-50/50 via-slate-50 to-white pb-20">
-      <div className="mx-auto max-w-6xl px-6 py-8">
-        <div className="mb-8 flex items-center justify-between">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="group -ml-2 text-slate-500 hover:bg-white hover:text-[#153160] hover:shadow-sm"
-          >
-            <Link to="/meetings" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-              Kembali ke Daftar Notulen
-            </Link>
-          </Button>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="overflow-hidden border-border/60 shadow-sm lg:col-span-3">
-            <CardHeader className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="bg-[#153160]/5 text-[#153160] hover:bg-[#153160]/10 border-[#153160]/20">
-                    {meeting.division}
-                  </Badge>
-                  <Badge variant="outline" className="border-slate-200 text-slate-600">
-                    {meeting.meeting_type}
-                  </Badge>
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                    {formatDate(meeting.meeting_date)}
-                  </div>
-                </div>
-                <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                  {meeting.title}
-                </CardTitle>
-                {meeting.speaker && (
-                  <p className="text-sm text-slate-500">
-                    Pembicara: <span className="font-semibold text-slate-700">{meeting.speaker}</span>
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  variant="outline"
-                  onClick={generatePDF}
-                  className="border-[#153160]/20 text-[#153160] hover:bg-[#153160]/5"
-                >
-                  <FileDown className="mr-2 h-4 w-4" />
-                  Export PDF
-                </Button>
-                <Button
-                  onClick={openEdit}
-                  className="bg-[#153160] shadow-lg shadow-[#153160]/20 hover:bg-[#153160]/90 hover:shadow-[#153160]/30"
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit Info
-                </Button>
-              </div>
-            </CardHeader>
-          </Card>
-
-          {/* Card 2: Ringkasan */}
-          <Card className="border-border/60 shadow-sm lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-800">Ringkasan & Catatan</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="rounded-xl border border-[#153160]/20 bg-[#153160]/5 p-4">
-                <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#153160]/80">Summary</h4>
-                <p className="text-sm leading-relaxed text-slate-700">
-                  {meeting.summary || "Tidak ada ringkasan tersedia."}
-                </p>
-              </div>
-              <div>
-                <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Notes</h4>
-                <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
-                  {meeting.notes || "Tidak ada catatan tambahan."}
+    <DashboardLayout title="Meeting Details" subtitle={meeting.title} hideMobileNav>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="overflow-hidden border-border/60 shadow-sm lg:col-span-3">
+          <CardHeader className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="bg-[#153160]/5 text-[#153160] hover:bg-[#153160]/10 border-[#153160]/20">
+                  {meeting.division}
+                </Badge>
+                <Badge variant="outline" className="border-slate-200 text-slate-600">
+                  {meeting.meeting_type}
+                </Badge>
+                <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {formatDate(meeting.meeting_date)}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Card 3: Peserta */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800">
-                <Users className="h-5 w-5 text-[#153160]" />
-                Peserta
+              <CardTitle className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                {meeting.title}
               </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {(meeting.participants as any[])?.length > 0 ? (
-                  (meeting.participants as any[]).map((p, i) => {
-                    const name = p.employee?.name || p.name || `Peserta ${i + 1}`;
-                    return (
-                      <Badge
-                        key={i}
-                        variant="secondary"
-                        className="bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
-                      >
-                        {name}
-                      </Badge>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm italic text-slate-400">Tidak ada peserta terdaftar.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              {meeting.speaker && (
+                <p className="text-sm text-slate-500">
+                  Pembicara: <span className="font-semibold text-slate-700">{meeting.speaker}</span>
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={generatePDF}
+                className="border-[#153160]/20 text-[#153160] hover:bg-[#153160]/5 h-8"
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Export PDF</span>
+              </Button>
+              <Button
+                size="sm"
+                onClick={openEdit}
+                className="bg-[#153160] shadow-lg shadow-[#153160]/20 hover:bg-[#153160]/90 h-8"
+              >
+                <Pencil className="mr-2 h-3.5 w-3.5" />
+                Edit
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
 
-          {/* Card 4: Tugas */}
-          <Card className="overflow-hidden border-border/60 shadow-sm lg:col-span-3">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold text-slate-800">Daftar Tugas (Action Items)</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-slate-50/50">
+        {/* Card 2: Ringkasan */}
+        <Card className="border-border/60 shadow-sm lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold text-slate-800">Ringkasan & Catatan</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="rounded-xl border border-[#153160]/20 bg-[#153160]/5 p-4">
+              <h4 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#153160]/80">Summary</h4>
+              <p className="text-sm leading-relaxed text-slate-700">
+                {meeting.summary || "—"}
+              </p>
+            </div>
+            <div>
+              <h4 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Notes</h4>
+              <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
+                {meeting.notes || "—"}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: Peserta */}
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-800">
+              <Users className="h-4 w-4 text-[#153160]" />
+              Peserta
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {(meeting.participants as any[])?.length > 0 ? (
+                (meeting.participants as any[]).map((p, i) => {
+                  const name = p.employee?.name || p.name || `Peserta ${i + 1}`;
+                  return (
+                    <Badge
+                      key={i}
+                      variant="secondary"
+                      className="bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700"
+                    >
+                      {name}
+                    </Badge>
+                  );
+                })
+              ) : (
+                <p className="text-sm italic text-slate-400">Tidak ada peserta.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Tugas */}
+        <Card className="overflow-hidden border-border/60 shadow-sm lg:col-span-3">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-slate-800">Daftar Tugas (Action Items)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow>
+                    <TableHead className="w-[180px] font-semibold text-slate-700">PIC</TableHead>
+                    <TableHead className="min-w-[200px] font-semibold text-slate-700">Deskripsi</TableHead>
+                    <TableHead className="w-[140px] text-right font-semibold text-slate-700">Nominal</TableHead>
+                    <TableHead className="w-[150px] font-semibold text-slate-700">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(meeting.results ?? []).length === 0 ? (
                     <TableRow>
-                      <TableHead className="w-[200px] font-semibold text-slate-700">PIC</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Deskripsi</TableHead>
-                      <TableHead className="w-[180px] text-right font-semibold text-slate-700">Target Nominal</TableHead>
-                      <TableHead className="w-[180px] font-semibold text-slate-700">Status</TableHead>
+                      <TableCell colSpan={4} className="py-12 text-center text-sm text-slate-400">
+                        Tidak ada tugas yang tercatat.
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(meeting.results ?? []).length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="py-12 text-center">
-                          <p className="text-sm text-slate-400">Tidak ada tugas yang tercatat dari rapat ini.</p>
+                  ) : (
+                    meeting.results!.map((r) => (
+                      <TableRow key={r.id} className="group transition-colors hover:bg-slate-50/50">
+                        <TableCell className="font-medium text-slate-900">
+                          {r.employee?.name || r.employee_name || "Unknown"}
+                        </TableCell>
+                        <TableCell className="text-slate-600 text-sm">{r.target_description}</TableCell>
+                        <TableCell className="text-right tabular-nums font-medium text-slate-900">
+                          {formatRupiah(r.target_nominal)}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            disabled={updatingStatus === r.id}
+                            value={r.achievement_status || "To Do"}
+                            onValueChange={(val) => handleStatusChange(r.id!, val)}
+                          >
+                            <SelectTrigger className={cn(
+                              "h-7 w-[120px] text-[11px] font-medium border-none shadow-none focus:ring-1",
+                              (r.achievement_status === "Done") && "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                              (r.achievement_status === "In Progress") && "bg-amber-50 text-amber-700 ring-amber-200",
+                              (r.achievement_status === "To Do" || !r.achievement_status) && "bg-slate-100 text-slate-700 ring-slate-200"
+                            )}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="To Do">To Do</SelectItem>
+                              <SelectItem value="In Progress">In Progress</SelectItem>
+                              <SelectItem value="Done">Done</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      meeting.results!.map((r) => (
-                        <TableRow key={r.id} className="group transition-colors hover:bg-slate-50/50">
-                          <TableCell className="font-medium text-slate-900">
-                            {r.employee?.name || r.employee_name || "Unknown"}
-                          </TableCell>
-                          <TableCell className="text-slate-600">{r.target_description}</TableCell>
-                          <TableCell className="text-right tabular-nums font-medium text-slate-900">
-                            {formatRupiah(r.target_nominal)}
-                          </TableCell>
-                          <TableCell>
-                            <Select
-                              disabled={updatingStatus === r.id}
-                              value={r.achievement_status || "To Do"}
-                              onValueChange={(val) => handleStatusChange(r.id!, val)}
-                            >
-                              <SelectTrigger className={cn(
-                                "h-8 w-[140px] text-xs font-medium border-none shadow-none focus:ring-1",
-                                (r.achievement_status === "Done") && "bg-emerald-50 text-emerald-700 ring-emerald-200",
-                                (r.achievement_status === "In Progress") && "bg-amber-50 text-amber-700 ring-amber-200",
-                                (r.achievement_status === "To Do" || !r.achievement_status) && "bg-slate-100 text-slate-700 ring-slate-200"
-                              )}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="To Do">To Do</SelectItem>
-                                <SelectItem value="In Progress">In Progress</SelectItem>
-                                <SelectItem value="Done">Done</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent className="max-w-2xl border-none p-0 shadow-2xl">
-            <DialogHeader className="px-6 py-4">
-              <DialogTitle className="text-xl font-bold text-slate-900">Edit Informasi Dasar</DialogTitle>
-              <DialogDescription className="text-slate-500">
-                Perbarui detail utama rapat. Data peserta dan tugas tidak akan terpengaruh.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-5 px-6 py-6">
-              <div className="grid gap-5 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Divisi</Label>
-                  <Input
-                    className="bg-slate-50 focus:bg-white"
-                    placeholder="Contoh: Operasional"
-                    value={division}
-                    onChange={(e) => setDivision(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tipe Rapat</Label>
-                  <Select value={meetingType} onValueChange={setMeetingType}>
-                    <SelectTrigger className="bg-slate-50 focus:bg-white"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {MEETING_TYPES.map((t) => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl border-none p-0 shadow-2xl">
+          <DialogHeader className="px-6 py-4">
+            <DialogTitle className="text-xl font-bold text-slate-900">Edit Informasi Dasar</DialogTitle>
+            <DialogDescription className="text-slate-500">
+              Perbarui detail utama rapat.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-5 px-6 py-6">
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Judul Rapat</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Divisi</Label>
                 <Input
                   className="bg-slate-50 focus:bg-white"
-                  placeholder="Judul agenda rapat"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-5 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tanggal Rapat</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start border-slate-200 bg-slate-50 text-left font-normal focus:bg-white",
-                          !meetingDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {meetingDate ? format(meetingDate, "PPP") : "Pilih tanggal"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={meetingDate}
-                        onSelect={setMeetingDate}
-                        initialFocus
-                        className="p-3"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pembicara / Lead</Label>
-                  <Input
-                    className="bg-slate-50 focus:bg-white"
-                    placeholder="Nama pembicara"
-                    value={speaker}
-                    onChange={(e) => setSpeaker(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Ringkasan (Summary)</Label>
-                <Textarea
-                  className="min-h-[80px] bg-slate-50 focus:bg-white"
-                  placeholder="Ringkasan hasil rapat..."
-                  value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
+                  value={division}
+                  onChange={(e) => setDivision(e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Catatan Tambahan (Notes)</Label>
-                <Textarea
-                  className="min-h-[100px] bg-slate-50 focus:bg-white"
-                  placeholder="Detail catatan penting lainnya..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tipe Rapat</Label>
+                <Select value={meetingType} onValueChange={setMeetingType}>
+                  <SelectTrigger className="bg-slate-50 focus:bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MEETING_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Judul Rapat</Label>
+              <Input
+                className="bg-slate-50 focus:bg-white"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tanggal Rapat</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start border-slate-200 bg-slate-50 text-left font-normal focus:bg-white",
+                        !meetingDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {meetingDate ? format(meetingDate, "PPP") : "Pilih tanggal"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={meetingDate}
+                      onSelect={setMeetingDate}
+                      initialFocus
+                      className="p-3"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pembicara / Lead</Label>
+                <Input
+                  className="bg-slate-50 focus:bg-white"
+                  value={speaker}
+                  onChange={(e) => setSpeaker(e.target.value)}
                 />
               </div>
             </div>
-            <DialogFooter className="px-6 py-4">
-              <Button
-                variant="ghost"
-                onClick={() => setEditOpen(false)}
-                disabled={saving}
-                className="text-slate-500 hover:bg-slate-200"
-              >
-                Batal
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                className="bg-[#153160] shadow-md shadow-[#153160]/20 hover:bg-[#153160]/90"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Menyimpan...
-                  </>
-                ) : (
-                  "Simpan Perubahan"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Ringkasan (Summary)</Label>
+              <Textarea
+                className="min-h-[80px] bg-slate-50 focus:bg-white"
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Catatan Tambahan (Notes)</Label>
+              <Textarea
+                className="min-h-[100px] bg-slate-50 focus:bg-white"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="px-6 py-4">
+            <Button
+              variant="ghost"
+              onClick={() => setEditOpen(false)}
+              disabled={saving}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-[#153160] shadow-md shadow-[#153160]/20 hover:bg-[#153160]/90"
+            >
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Simpan Perubahan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </DashboardLayout>
   );
 }
 
