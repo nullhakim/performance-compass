@@ -1,12 +1,14 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Users,
   Target,
   FolderTree,
   Package,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logout } from "@/lib/auth";
 
 const items = [
   { title: "Home", to: "/dashboard", icon: LayoutDashboard },
@@ -18,6 +20,7 @@ const items = [
 
 export function MobileNav() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
+  const router = useRouter();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background/80 px-2 pb-safe backdrop-blur-lg md:hidden">
@@ -40,6 +43,16 @@ export function MobileNav() {
           </Link>
         );
       })}
+      <button
+        onClick={() => {
+          logout();
+          router.navigate({ to: "/login" });
+        }}
+        className="flex flex-col items-center gap-1 px-3 py-1 transition-colors text-muted-foreground hover:text-foreground"
+      >
+        <LogOut className="h-5 w-5" />
+        <span className="text-[10px] font-medium">Log out</span>
+      </button>
     </nav>
   );
 }

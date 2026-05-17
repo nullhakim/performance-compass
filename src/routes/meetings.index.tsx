@@ -10,6 +10,7 @@ import {
   Trash2,
   Users,
   X,
+  LogOut,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ import {
   type Meeting,
   type MeetingInput,
 } from "@/lib/api";
+import { logout } from "@/lib/auth";
 
 export const Route = createFileRoute("/meetings/")({
   head: () => ({
@@ -59,7 +61,7 @@ export const Route = createFileRoute("/meetings/")({
       { title: "Meeting Minutes — Super App Internal" },
       {
         name: "description",
-        content: "Catat hasil rapat, daftar hadir, dan pantau status Action Items.",
+        content: "Record meeting minutes, attendance, and monitor Action Items status.",
       },
     ],
   }),
@@ -116,7 +118,7 @@ function MeetingsPage() {
       setMeetings(Array.isArray(m) ? m : []);
       setEmployees(Array.isArray(emp) ? emp : []);
     } catch (e) {
-      toast.error((e as Error).message || "Gagal memuat data rapat");
+      toast.error((e as Error).message || "Failed to load meeting data");
     } finally {
       setLoading(false);
     }
@@ -172,12 +174,12 @@ function MeetingsPage() {
     setSubmitting(true);
     try {
       await api.createMeeting(payload);
-      toast.success("Notulen rapat berhasil dibuat");
+      toast.success("Meeting minutes created successfully");
       setOpen(false);
       resetForm();
       load();
     } catch (e) {
-      toast.error((e as Error).message || "Gagal menyimpan notulen");
+      toast.error((e as Error).message || "Failed to save meeting minutes");
     } finally {
       setSubmitting(false);
     }
@@ -191,17 +193,30 @@ function MeetingsPage() {
             Recent Meetings
           </h2>
           <p className="text-sm text-slate-500">
-            Daftar notulen rapat terbaru.
+            List of recent meeting minutes.
           </p>
         </div>
-        <Button 
-          onClick={() => setOpen(true)}
-          className="bg-[#153160] shadow-lg shadow-[#153160]/20 hover:bg-[#153160]/90"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          <span className="hidden sm:inline">Tambah Notulen</span>
-          <span className="sm:hidden">Tambah</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={() => setOpen(true)}
+            className="bg-[#153160] shadow-lg shadow-[#153160]/20 hover:bg-[#153160]/90"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Add Minutes</span>
+            <span className="sm:hidden">Add</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={() => {
+              logout();
+              navigate({ to: "/login" });
+            }}
+          >
+            <LogOut className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Log out</span>
+          </Button>
+        </div>
       </div>
 
       <Card className="overflow-hidden border-border/60 shadow-sm">
@@ -210,10 +225,10 @@ function MeetingsPage() {
             <Table>
               <TableHeader className="bg-slate-50/50">
                 <TableRow>
-                  <TableHead className="w-[150px] font-semibold text-slate-700">Tanggal</TableHead>
-                  <TableHead className="w-[120px] font-semibold text-slate-700">Divisi</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Judul Rapat</TableHead>
-                  <TableHead className="w-[100px] text-right font-semibold text-slate-700">Peserta</TableHead>
+                  <TableHead className="w-[150px] font-semibold text-slate-700">Date</TableHead>
+                  <TableHead className="w-[120px] font-semibold text-slate-700">Division</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Meeting Title</TableHead>
+                  <TableHead className="w-[100px] text-right font-semibold text-slate-700">Participants</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -222,7 +237,7 @@ function MeetingsPage() {
                     <TableCell colSpan={4} className="py-20 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <Loader2 className="h-8 w-8 animate-spin text-[#153160]" />
-                        <p className="text-sm font-medium text-slate-400">Memuat data rapat...</p>
+                        <p className="text-sm font-medium text-slate-400">Loading meeting data...</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -233,7 +248,7 @@ function MeetingsPage() {
                         <div className="rounded-full bg-slate-100 p-4">
                           <FileText className="h-8 w-8 text-slate-300" />
                         </div>
-                        <p className="text-sm font-medium text-slate-500">Belum ada notulen rapat.</p>
+                        <p className="text-sm font-medium text-slate-500">No meeting minutes yet.</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -278,16 +293,16 @@ function MeetingsPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-900">Tambah Notulen Rapat</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-slate-900">Add Meeting Minutes</DialogTitle>
             <DialogDescription className="text-slate-500">
-              Catat informasi rapat, peserta, dan daftar tugas (action items).
+              Record meeting information, participants, and action items.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-6 px-4 py-4 md:px-6 md:py-6">
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Divisi *</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Division *</Label>
                 <Input 
                   className="bg-slate-50 focus:bg-white"
                   value={division} 
@@ -296,7 +311,7 @@ function MeetingsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tipe Rapat *</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Meeting Type *</Label>
                 <Select value={meetingType} onValueChange={setMeetingType}>
                   <SelectTrigger className="bg-slate-50 focus:bg-white"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -309,7 +324,7 @@ function MeetingsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Judul Rapat *</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Meeting Title *</Label>
               <Input 
                 className="bg-slate-50 focus:bg-white"
                 value={title} 
@@ -320,7 +335,7 @@ function MeetingsPage() {
 
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tanggal Rapat *</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Meeting Date *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -331,7 +346,7 @@ function MeetingsPage() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {meetingDate ? format(meetingDate, "PPP") : "Pilih tanggal"}
+                      {meetingDate ? format(meetingDate, "PPP") : "Select date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -346,7 +361,7 @@ function MeetingsPage() {
                 </Popover>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pembicara / Lead</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Speaker / Lead</Label>
                 <Input 
                   className="bg-slate-50 focus:bg-white"
                   value={speaker} 
@@ -357,7 +372,7 @@ function MeetingsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Ringkasan (Summary)</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Summary</Label>
               <Textarea 
                 className="min-h-[80px] bg-slate-50 focus:bg-white"
                 value={summary} 
@@ -368,7 +383,7 @@ function MeetingsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Catatan (Notes)</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Notes</Label>
               <Textarea 
                 className="min-h-[100px] bg-slate-50 focus:bg-white"
                 value={notes} 
@@ -379,7 +394,7 @@ function MeetingsPage() {
             </div>
 
             <div className="space-y-3">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Peserta ({participantIds.length})</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Participants ({participantIds.length})</Label>
               <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50/50 p-2">
                 <div className="grid gap-1 sm:grid-cols-2">
                   {employees.map((emp) => {
@@ -411,7 +426,7 @@ function MeetingsPage() {
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Daftar Tugas (Action Items)</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Action Items</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -419,7 +434,7 @@ function MeetingsPage() {
                   className="border-[#153160]/20 text-[#153160] hover:bg-[#153160]/5"
                   onClick={() => setResults((r) => [...r, emptyResult()])}
                 >
-                  <Plus className="mr-1 h-3.5 w-3.5" /> Tambah Tugas
+                  <Plus className="mr-1 h-3.5 w-3.5" /> Add Task
                 </Button>
               </div>
               
@@ -427,7 +442,7 @@ function MeetingsPage() {
                 {results.map((r, idx) => (
                   <Card key={idx} className="border-slate-100 bg-slate-50/30 p-4">
                     <div className="mb-3 flex items-center justify-between">
-                      <Badge variant="outline" className="bg-white text-slate-500">Tugas #{idx + 1}</Badge>
+                      <Badge variant="outline" className="bg-white text-slate-500">Task #{idx + 1}</Badge>
                       <Button
                         type="button"
                         variant="ghost"
@@ -447,7 +462,7 @@ function MeetingsPage() {
                             setResults((rs) => rs.map((x, i) => (i === idx ? { ...x, employee_id: v } : x)))
                           }
                         >
-                          <SelectTrigger className="bg-white"><SelectValue placeholder="Pilih PIC" /></SelectTrigger>
+                          <SelectTrigger className="bg-white"><SelectValue placeholder="Select PIC" /></SelectTrigger>
                           <SelectContent>
                             {employees.map((e) => (
                               <SelectItem key={String(e.id)} value={String(e.id)}>{e.name}</SelectItem>
@@ -456,7 +471,7 @@ function MeetingsPage() {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Nominal Target *</Label>
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Nominal *</Label>
                         <Input
                           className="bg-white"
                           type="number"
@@ -468,7 +483,7 @@ function MeetingsPage() {
                         />
                       </div>
                       <div className="space-y-1.5 md:col-span-2">
-                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Deskripsi Tugas *</Label>
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Task Description *</Label>
                         <Input
                           className="bg-white"
                           value={r.target_description}
@@ -479,7 +494,7 @@ function MeetingsPage() {
                         />
                       </div>
                       <div className="space-y-1.5 md:col-span-2">
-                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tenggat Waktu *</Label>
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Due Date *</Label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
@@ -492,7 +507,7 @@ function MeetingsPage() {
                               <CalendarIcon className="mr-2 h-4 w-4 text-slate-400" />
                               {r.target_completion_date
                                 ? format(r.target_completion_date, "PPP")
-                                : "Pilih tanggal"}
+                                : "Select date"}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
@@ -523,7 +538,7 @@ function MeetingsPage() {
               onClick={() => setOpen(false)} 
               disabled={submitting}
             >
-              Batal
+              Cancel
             </Button>
             <Button 
               onClick={handleSubmit} 
@@ -533,10 +548,10 @@ function MeetingsPage() {
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
+                  Saving...
                 </>
               ) : (
-                "Simpan Notulen"
+                "Save Minutes"
               )}
             </Button>
           </DialogFooter>

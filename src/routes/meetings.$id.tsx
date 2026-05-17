@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarIcon, Loader2, Pencil, Users, FileDown } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Loader2, Pencil, Users, FileDown, LogOut } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -38,6 +38,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { api, formatDate, formatRupiah, type Meeting, type MeetingUpdateInput, type ID } from "@/lib/api";
+import { logout } from "@/lib/auth";
 
 export const Route = createFileRoute("/meetings/$id")({
   component: MeetingDetailPage,
@@ -58,6 +59,7 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 
 function MeetingDetailPage() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
@@ -79,7 +81,7 @@ function MeetingDetailPage() {
       const m = await api.getMeeting(id);
       setMeeting(m);
     } catch (e) {
-      toast.error((e as Error).message || "Gagal memuat detail rapat");
+      toast.error((e as Error).message || "Failed to load meeting details");
     } finally {
       setLoading(false);
     }
@@ -103,7 +105,7 @@ function MeetingDetailPage() {
 
   const handleSave = async () => {
     if (!meetingDate) {
-      toast.error("Tanggal rapat wajib diisi");
+      toast.error("Meeting date is required");
       return;
     }
     const payload: MeetingUpdateInput = {
@@ -118,11 +120,11 @@ function MeetingDetailPage() {
     setSaving(true);
     try {
       await api.updateMeeting(id, payload);
-      toast.success("Informasi rapat diperbarui");
+      toast.success("Meeting information updated");
       setEditOpen(false);
       load();
     } catch (e) {
-      toast.error((e as Error).message || "Gagal memperbarui");
+      toast.error((e as Error).message || "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -132,10 +134,10 @@ function MeetingDetailPage() {
     setUpdatingStatus(resultId);
     try {
       await api.patchResultStatus(resultId, newStatus);
-      toast.success("Status tugas berhasil diperbarui");
+      toast.success("Task status updated successfully");
       load();
     } catch (e) {
-      toast.error((e as Error).message || "Gagal memperbarui status");
+      toast.error((e as Error).message || "Failed to update status");
     } finally {
       setUpdatingStatus(null);
     }
@@ -339,12 +341,12 @@ function MeetingDetailPage() {
         <div className="mb-4 rounded-full bg-slate-100 p-3">
           <CalendarIcon className="h-6 w-6 text-slate-400" />
         </div>
-        <h3 className="mb-2 text-lg font-bold">Rapat Tidak Ditemukan</h3>
+        <h3 className="mb-2 text-lg font-bold">Meeting Not Found</h3>
         <p className="mb-6 text-sm text-muted-foreground">
-          Maaf, kami tidak dapat menemukan data rapat yang Anda cari.
+          Sorry, we could not find the meeting you are looking for.
         </p>
         <Button asChild variant="outline">
-          <Link to="/meetings">Kembali ke Daftar</Link>
+          <Link to="/meetings">Back to List</Link>
         </Button>
       </div>
     );
@@ -373,7 +375,7 @@ function MeetingDetailPage() {
               </CardTitle>
               {meeting.speaker && (
                 <p className="text-sm text-slate-500">
-                  Pembicara: <span className="font-semibold text-slate-700">{meeting.speaker}</span>
+                  Speaker: <span className="font-semibold text-slate-700">{meeting.speaker}</span>
                 </p>
               )}
             </div>
@@ -395,6 +397,18 @@ function MeetingDetailPage() {
                 <Pencil className="mr-2 h-3.5 w-3.5" />
                 Edit
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 h-8"
+                onClick={() => {
+                  logout();
+                  navigate({ to: "/login" });
+                }}
+              >
+                <LogOut className="h-3.5 w-3.5 sm:mr-2" />
+                <span className="hidden sm:inline">Log out</span>
+              </Button>
             </div>
           </CardHeader>
         </Card>
@@ -402,7 +416,7 @@ function MeetingDetailPage() {
         {/* Card 2: Ringkasan */}
         <Card className="border-border/60 shadow-sm lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-slate-800">Ringkasan & Catatan</CardTitle>
+            <CardTitle className="text-base font-semibold text-slate-800">Summary & Notes</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="rounded-xl border border-[#153160]/20 bg-[#153160]/5 p-4">
@@ -425,7 +439,7 @@ function MeetingDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-800">
               <Users className="h-4 w-4 text-[#153160]" />
-              Peserta
+              Participants
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -444,7 +458,7 @@ function MeetingDetailPage() {
                   );
                 })
               ) : (
-                <p className="text-sm italic text-slate-400">Tidak ada peserta.</p>
+                <p className="text-sm italic text-slate-400">No participants.</p>
               )}
             </div>
           </CardContent>
@@ -453,7 +467,7 @@ function MeetingDetailPage() {
         {/* Card 4: Tugas */}
         <Card className="overflow-hidden border-border/60 shadow-sm lg:col-span-3">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-slate-800">Daftar Tugas (Action Items)</CardTitle>
+            <CardTitle className="text-base font-semibold text-slate-800">Action Items</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -461,7 +475,7 @@ function MeetingDetailPage() {
                 <TableHeader className="bg-slate-50/50">
                   <TableRow>
                     <TableHead className="w-[180px] font-semibold text-slate-700">PIC</TableHead>
-                    <TableHead className="min-w-[200px] font-semibold text-slate-700">Deskripsi</TableHead>
+                    <TableHead className="min-w-[200px] font-semibold text-slate-700">Description</TableHead>
                     <TableHead className="w-[140px] text-right font-semibold text-slate-700">Nominal</TableHead>
                     <TableHead className="w-[150px] font-semibold text-slate-700">Status</TableHead>
                   </TableRow>
@@ -470,7 +484,7 @@ function MeetingDetailPage() {
                   {(meeting.results ?? []).length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="py-12 text-center text-sm text-slate-400">
-                        Tidak ada tugas yang tercatat.
+                        No recorded tasks.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -517,15 +531,15 @@ function MeetingDetailPage() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-2xl border-none p-0 shadow-2xl">
           <DialogHeader className="px-6 py-4">
-            <DialogTitle className="text-xl font-bold text-slate-900">Edit Informasi Dasar</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-slate-900">Edit Basic Information</DialogTitle>
             <DialogDescription className="text-slate-500">
-              Perbarui detail utama rapat.
+              Update main meeting details.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-5 px-6 py-6">
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Divisi</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Division</Label>
                 <Input
                   className="bg-slate-50 focus:bg-white"
                   value={division}
@@ -533,7 +547,7 @@ function MeetingDetailPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tipe Rapat</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Meeting Type</Label>
                 <Select value={meetingType} onValueChange={setMeetingType}>
                   <SelectTrigger className="bg-slate-50 focus:bg-white"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -545,7 +559,7 @@ function MeetingDetailPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Judul Rapat</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Meeting Title</Label>
               <Input
                 className="bg-slate-50 focus:bg-white"
                 value={title}
@@ -554,7 +568,7 @@ function MeetingDetailPage() {
             </div>
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tanggal Rapat</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Meeting Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -565,7 +579,7 @@ function MeetingDetailPage() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {meetingDate ? format(meetingDate, "PPP") : "Pilih tanggal"}
+                      {meetingDate ? format(meetingDate, "PPP") : "Select date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -580,7 +594,7 @@ function MeetingDetailPage() {
                 </Popover>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pembicara / Lead</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Speaker / Lead</Label>
                 <Input
                   className="bg-slate-50 focus:bg-white"
                   value={speaker}
@@ -589,7 +603,7 @@ function MeetingDetailPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Ringkasan (Summary)</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Summary</Label>
               <Textarea
                 className="min-h-[80px] bg-slate-50 focus:bg-white"
                 value={summary}
@@ -597,7 +611,7 @@ function MeetingDetailPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Catatan Tambahan (Notes)</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Additional Notes</Label>
               <Textarea
                 className="min-h-[100px] bg-slate-50 focus:bg-white"
                 value={notes}
@@ -611,7 +625,7 @@ function MeetingDetailPage() {
               onClick={() => setEditOpen(false)}
               disabled={saving}
             >
-              Batal
+              Cancel
             </Button>
             <Button
               onClick={handleSave}
@@ -619,7 +633,7 @@ function MeetingDetailPage() {
               className="bg-[#153160] shadow-md shadow-[#153160]/20 hover:bg-[#153160]/90"
             >
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Simpan Perubahan
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

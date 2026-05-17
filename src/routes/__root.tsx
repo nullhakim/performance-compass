@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -6,10 +7,12 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  redirect,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
+import { isAuthenticated } from "@/lib/auth";
 
 function NotFoundComponent() {
   return (
@@ -69,6 +72,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  beforeLoad: ({ location }) => {
+    if (!isAuthenticated() && location.pathname !== "/login") {
+      throw redirect({
+        to: "/login",
+      });
+    }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -121,6 +131,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !isAuthenticated() && window.location.pathname !== "/login") {
+      router.navigate({ to: "/login" });
+    }
+  }, [router]);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Users,
@@ -7,8 +7,10 @@ import {
   Building2,
   FolderTree,
   Package,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logout } from "@/lib/auth";
 
 type NavItem = {
   title: string;
@@ -42,6 +44,7 @@ function isGroup(i: NavItem | NavGroup): i is NavGroup {
 
 export function AppSidebar() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
+  const router = useRouter();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-sidebar text-sidebar-foreground md:flex">
@@ -102,9 +105,21 @@ export function AppSidebar() {
           );
         })}
       </nav>
-      <div className="border-t border-sidebar-border px-5 py-4 text-[10px] leading-relaxed text-sidebar-foreground/55">
-        <p className="font-semibold text-sidebar-foreground/80">Bank Galuh Ciamis</p>
-        <p>Banking Performance Suite</p>
+      <div className="mt-auto border-t border-sidebar-border px-3 py-4 text-[10px] leading-relaxed text-sidebar-foreground/55">
+        <button
+          onClick={() => {
+            logout();
+            router.navigate({ to: "/login" });
+          }}
+          className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-[13px] font-medium transition-colors text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground mb-4"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Log out</span>
+        </button>
+        <div className="px-2">
+          <p className="font-semibold text-sidebar-foreground/80">Bank Galuh Ciamis</p>
+          <p>Banking Performance Suite</p>
+        </div>
       </div>
     </aside>
   );

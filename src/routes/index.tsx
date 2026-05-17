@@ -2,12 +2,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BarChart3, FileText, LogOut, ArrowRight, Users, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { logout } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Super App Internal — Bank Galuh" },
-      { name: "description", content: "Gerbang utama Super App Internal Bank Galuh." },
+      { name: "description", content: "Main gateway of Bank Galuh Internal Super App." },
     ],
   }),
   component: LandingPage,
@@ -18,7 +19,8 @@ function LandingPage() {
   const userName = "Admin";
 
   const handleLogout = () => {
-    navigate({ to: "/" });
+    logout();
+    navigate({ to: "/login" });
   };
 
   return (
@@ -54,10 +56,10 @@ function LandingPage() {
             Main Menu
           </div>
           <h1 className="mt-5 text-[34px] font-semibold leading-tight tracking-tight text-foreground md:text-[40px]">
-            Pilih modul untuk memulai
+            Select a module to start
           </h1>
           <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-            Akses cepat ke seluruh tools internal Anda. Pantau kinerja tim dan kelola dokumentasi rapat dari satu tempat.
+            Quick access to all your internal tools. Monitor team performance and manage meeting documentation in one place.
           </p>
         </div>
 
@@ -65,14 +67,14 @@ function LandingPage() {
           <ModuleCard
             to="/dashboard"
             title="Employee Tracker"
-            description="Kelola data karyawan, KPI, dan pencapaian target bulanan."
+            description="Manage employee data, KPIs, and monthly target achievements."
             icon={<BarChart3 className="h-6 w-6" />}
             secondaryIcon={<Users className="h-4 w-4" />}
           />
           <ModuleCard
             to="/meetings"
             title="Meeting Minutes"
-            description="Catat hasil rapat, daftar hadir, dan pantau status Action Items."
+            description="Record meeting minutes, attendance, and monitor Action Items status."
             icon={<FileText className="h-6 w-6" />}
             secondaryIcon={<Users className="h-4 w-4" />}
           />
@@ -116,7 +118,7 @@ function ModuleCard({ to, title, description, icon, secondaryIcon }: ModuleCardP
             <p className="text-[13.5px] leading-relaxed text-muted-foreground">{description}</p>
           </div>
           <div className="mt-auto flex items-center gap-1.5 text-[13px] font-medium text-primary">
-            <span>Buka modul</span>
+            <span>Open module</span>
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
           </div>
         </CardContent>
