@@ -11,13 +11,15 @@ export function DashboardLayout({
   title, 
   subtitle,
   hideMobileNav = false,
-  hideSidebar = false
+  hideSidebar = false,
+  backTo = "/"
 }: { 
   children: ReactNode; 
   title: string; 
   subtitle?: string;
   hideMobileNav?: boolean;
   hideSidebar?: boolean;
+  backTo?: string;
 }) {
   return (
     <div className="min-h-screen bg-background">
@@ -31,7 +33,7 @@ export function DashboardLayout({
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:bg-muted"
             >
-              <Link to="/" title="Back to Main Menu">
+              <Link to={backTo} title="Back">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>

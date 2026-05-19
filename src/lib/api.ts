@@ -258,6 +258,9 @@ export interface Meeting {
   summary?: string;
   notes?: string;
   speaker?: string;
+  location?: string;
+  minute_taker?: string;
+  external_participants?: string[];
   participant_ids?: ID[];
   participants?: MeetingParticipant[] | Employee[];
   results?: MeetingResult[];
@@ -272,6 +275,9 @@ export interface MeetingInput {
   summary: string;
   notes: string;
   speaker: string;
+  location: string;
+  minute_taker: string;
+  external_participants: string[];
   participant_ids: string[];
   results: {
     employee_id: string;
@@ -284,7 +290,7 @@ export interface MeetingInput {
 
 export type MeetingUpdateInput = Pick<
   MeetingInput,
-  "division" | "title" | "meeting_date" | "meeting_type" | "summary" | "notes" | "speaker"
+  "division" | "title" | "meeting_date" | "meeting_type" | "summary" | "notes" | "speaker" | "location" | "minute_taker" | "external_participants"
 >;
 
 export function formatRupiah(value: number): string {

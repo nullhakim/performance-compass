@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   CalendarIcon,
   FileText,
   Loader2,
+  Pencil,
   Plus,
   Trash2,
   Users,
@@ -54,6 +55,8 @@ import {
   type MeetingInput,
 } from "@/lib/api";
 import { logout } from "@/lib/auth";
+const ReactQuill = lazy(() => import("react-quill-new"));
+import "react-quill-new/dist/quill.snow.css";
 
 export const Route = createFileRoute("/meetings/")({
   head: () => ({
@@ -92,6 +95,7 @@ function MeetingsPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // form state
@@ -101,6 +105,10 @@ function MeetingsPage() {
   const [summary, setSummary] = useState("");
   const [notes, setNotes] = useState("");
   const [speaker, setSpeaker] = useState("");
+  const [location, setLocation] = useState("Gedung Utama");
+  const [minuteTaker, setMinuteTaker] = useState("Bapak Admin");
+  const [externalParticipants, setExternalParticipants] = useState<string[]>([]);
+  const [extParticipantInput, setExtParticipantInput] = useState("");
   const [meetingDate, setMeetingDate] = useState<Date | undefined>(undefined);
   const [participantIds, setParticipantIds] = useState<string[]>([]);
   const [results, setResults] = useState<ResultDraft[]>([]);
@@ -135,6 +143,10 @@ function MeetingsPage() {
     setSummary("");
     setNotes("");
     setSpeaker("");
+    setLocation("Gedung Utama");
+    setMinuteTaker("Bapak Admin");
+    setExternalParticipants([]);
+    setExtParticipantInput("");
     setMeetingDate(undefined);
     setParticipantIds([]);
     setResults([]);
@@ -144,6 +156,21 @@ function MeetingsPage() {
     setParticipantIds((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
+  };
+
+  const handleAddExternalParticipant = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const val = extParticipantInput.trim();
+      if (val && !externalParticipants.includes(val)) {
+        setExternalParticipants([...externalParticipants, val]);
+        setExtParticipantInput("");
+      }
+    }
+  };
+
+  const removeExternalParticipant = (name: string) => {
+    setExternalParticipants(externalParticipants.filter(p => p !== name));
   };
 
   const handleSubmit = async () => {
@@ -159,6 +186,9 @@ function MeetingsPage() {
       summary,
       notes,
       speaker,
+      location,
+      minute_taker: minuteTaker,
+      external_participants: externalParticipants,
       participant_ids: participantIds,
       results: results
         .filter((r) => r.employee_id && r.target_description && r.target_completion_date)
@@ -369,6 +399,82 @@ function MeetingsPage() {
                   placeholder="Nama pembicara" 
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Location</Label>
+                <Input 
+                  className="bg-slate-50 focus:bg-white"
+                  value={location} 
+                  onChange={(e) => setLocation(e.target.value)} 
+                  placeholder="Gedung Utama" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Minute Taker</Label>
+                <Input 
+                  className="bg-slate-50 focus:bg-white"
+                  value={minuteTaker} 
+                  onChange={(e) => setMinuteTaker(e.target.value)} 
+                  placeholder="Bapak Admin" 
+                />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">External Participants</Label>
+                <div className="flex flex-col gap-2 rounded-md border border-input bg-slate-50 p-2 focus-within:ring-1 focus-within:ring-ring focus-within:bg-white transition-colors">
+                  {externalParticipants.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {externalParticipants.map(p => (
+                        <Badge key={p} variant="secondary" className="bg-[#153160]/10 text-[#153160] hover:bg-[#153160]/20 flex items-center gap-1 font-medium">
+                          {p}
+                          <button 
+                            type="button" 
+                            onClick={() => removeExternalParticipant(p)}
+                            className="rounded-full hover:bg-[#153160]/20 p-0.5 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <Input 
+                    className="border-0 bg-transparent px-1 py-0 h-7 focus-visible:ring-0 shadow-none text-sm placeholder:text-slate-400"
+                    value={extParticipantInput} 
+                    onChange={(e) => setExtParticipantInput(e.target.value)} 
+                    onKeyDown={handleAddExternalParticipant}
+                    placeholder={externalParticipants.length === 0 ? "Ketik nama lalu tekan Enter" : "Tambah lagi..."} 
+                  />
+                </div>
+              </div>
+              <div className="space-y-3 md:col-span-2">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Internal Participants ({participantIds.length})</Label>
+                <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50/50 p-2">
+                  <div className="grid gap-1 sm:grid-cols-2">
+                    {employees.map((emp) => {
+                      const id = String(emp.id);
+                      const checked = participantIds.includes(id);
+                      return (
+                        <label
+                          key={id}
+                          className={cn(
+                            "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white",
+                            checked && "bg-white shadow-sm ring-1 ring-[#153160]/20"
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-slate-300 text-[#153160] focus:ring-[#153160]"
+                            checked={checked}
+                            onChange={() => toggleParticipant(id)}
+                          />
+                          <span className={cn("flex-1 truncate", checked ? "font-semibold text-slate-900" : "text-slate-600")}>
+                            {emp.name}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -384,45 +490,27 @@ function MeetingsPage() {
 
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Notes</Label>
-              <Textarea 
-                className="min-h-[100px] bg-slate-50 focus:bg-white"
-                value={notes} 
-                onChange={(e) => setNotes(e.target.value)} 
-                placeholder="Detail catatan penting lainnya..."
-                rows={3} 
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Participants ({participantIds.length})</Label>
-              <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50/50 p-2">
-                <div className="grid gap-1 sm:grid-cols-2">
-                  {employees.map((emp) => {
-                    const id = String(emp.id);
-                    const checked = participantIds.includes(id);
-                    return (
-                      <label
-                        key={id}
-                        className={cn(
-                          "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white",
-                          checked && "bg-white shadow-sm ring-1 ring-[#153160]/20"
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-[#153160] focus:ring-[#153160]"
-                          checked={checked}
-                          onChange={() => toggleParticipant(id)}
-                        />
-                        <span className={cn("flex-1 truncate", checked ? "font-semibold text-slate-900" : "text-slate-600")}>
-                          {emp.name}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
+              <div className="flex flex-col gap-2">
+                <div 
+                  className={cn(
+                    "min-h-[80px] rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 line-clamp-3",
+                    !notes && "text-slate-400 italic"
+                  )}
+                  dangerouslySetInnerHTML={{ __html: notes || "Belum ada catatan." }}
+                />
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-fit"
+                  onClick={() => setNotesModalOpen(true)}
+                >
+                  <Pencil className="mr-2 h-3.5 w-3.5" />
+                  Edit Notes in Rich Text
+                </Button>
               </div>
             </div>
+
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -553,6 +641,34 @@ function MeetingsPage() {
               ) : (
                 "Save Minutes"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={notesModalOpen} onOpenChange={setNotesModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-900">Edit Notes</DialogTitle>
+            <DialogDescription className="text-slate-500">
+              Format your meeting notes using the rich text editor below.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto py-4">
+            <Suspense fallback={<div className="h-[350px] flex items-center justify-center text-sm text-slate-500">Loading editor...</div>}>
+              <ReactQuill 
+                theme="snow" 
+                value={notes} 
+                onChange={setNotes} 
+                style={{ height: '350px', marginBottom: '40px' }}
+              />
+            </Suspense>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button onClick={() => setNotesModalOpen(false)} className="bg-[#153160] hover:bg-[#153160]/90">
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>
