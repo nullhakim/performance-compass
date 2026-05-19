@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarIcon, Loader2, Pencil, Users, FileDown, LogOut } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Loader2, Pencil, Users, FileDown, LogOut, X } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -678,17 +678,19 @@ function MeetingDetailPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="rounded-xl border border-[#153160]/20 bg-[#153160]/5 p-4">
-              <h4 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#153160]/80">Summary</h4>
+              <h2 className="text-lg font-bold text-slate-900 mb-3">Summary</h2>
               <p className="text-sm leading-relaxed text-slate-700">
                 {meeting.summary || "—"}
               </p>
             </div>
             <div>
-              <h4 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Notes</h4>
-              <div 
-                className="text-sm leading-relaxed text-slate-600 ql-editor px-0 py-0"
-                dangerouslySetInnerHTML={{ __html: meeting.notes || "—" }}
-              />
+              <h2 className="text-lg font-bold text-slate-900 mb-3">Notes</h2>
+              <div className="ql-container ql-snow border-none">
+                <div 
+                  className="text-sm leading-relaxed text-slate-600 ql-editor px-0 py-0 break-words [word-break:break-word] overflow-x-hidden [&_p]:mb-3.5 [&_p:last-child]:mb-0 [&_ul]:mb-3.5 [&_ul:last-child]:mb-0 [&_ol]:mb-3.5 [&_ol:last-child]:mb-0 [&_li]:mb-1.5"
+                  dangerouslySetInnerHTML={{ __html: meeting.notes || "—" }}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -804,7 +806,7 @@ function MeetingDetailPage() {
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-2xl border-none p-0 shadow-2xl">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto border-none p-0 shadow-2xl">
           <DialogHeader className="px-6 py-4">
             <DialogTitle className="text-xl font-bold text-slate-900">Edit Basic Information</DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -932,13 +934,17 @@ function MeetingDetailPage() {
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Additional Notes</Label>
               <div className="flex flex-col gap-2">
-                <div 
-                  className={cn(
-                    "min-h-[80px] rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 line-clamp-3",
-                    !notes && "text-slate-400 italic"
-                  )}
-                  dangerouslySetInnerHTML={{ __html: notes || "Belum ada catatan." }}
-                />
+                <div className="max-h-[150px] min-h-[80px] w-full rounded-md border border-slate-200 bg-slate-50 p-3 overflow-y-auto">
+                  <div className="ql-container ql-snow border-none">
+                    <div 
+                      className={cn(
+                        "ql-editor p-0 text-sm text-slate-600 break-words [word-break:break-word] overflow-x-hidden",
+                        !notes && "text-slate-400 italic"
+                      )}
+                      dangerouslySetInnerHTML={{ __html: notes || "Belum ada catatan." }}
+                    />
+                  </div>
+                </div>
                 <Button 
                   type="button" 
                   variant="outline" 

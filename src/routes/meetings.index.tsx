@@ -491,13 +491,17 @@ function MeetingsPage() {
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Notes</Label>
               <div className="flex flex-col gap-2">
-                <div 
-                  className={cn(
-                    "min-h-[80px] rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 line-clamp-3",
-                    !notes && "text-slate-400 italic"
-                  )}
-                  dangerouslySetInnerHTML={{ __html: notes || "Belum ada catatan." }}
-                />
+                <div className="max-h-[150px] min-h-[80px] w-full rounded-md border border-slate-200 bg-slate-50 p-3 overflow-y-auto">
+                  <div className="ql-container ql-snow border-none">
+                    <div 
+                      className={cn(
+                        "ql-editor p-0 text-sm text-slate-600 break-words [word-break:break-word] overflow-x-hidden",
+                        !notes && "text-slate-400 italic"
+                      )}
+                      dangerouslySetInnerHTML={{ __html: notes || "Belum ada catatan." }}
+                    />
+                  </div>
+                </div>
                 <Button 
                   type="button" 
                   variant="outline" 
